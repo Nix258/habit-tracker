@@ -234,11 +234,11 @@ const DEF={
 };
 
 let S=JSON.parse(JSON.stringify(DEF));
-let gapiOK=false, dfid=null, saveT=null;
+let dfid=null, saveT=null;
 
 function loadLocal(){try{const r=localStorage.getItem(LKEY);if(r)S=JSON.parse(r);}catch(e){}}
 function saveLocal(){try{localStorage.setItem(LKEY,JSON.stringify(S));}catch(e){}}
-function sched(){saveLocal();if(gapiOK){setSS('busy');clearTimeout(saveT);saveT=setTimeout(saveDrive,1400);}}
+function sched(){saveLocal();if(accessToken){setSS('busy');clearTimeout(saveT);saveT=setTimeout(saveDrive,1400);}}
 
 function ck(w,hid,di){return`w${w}_${hid}_d${di}`;}
 function isCk(w,hid,di){return!!S.checks[ck(w,hid,di)];}
