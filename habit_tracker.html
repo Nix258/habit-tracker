@@ -451,12 +451,18 @@ function resetAll(){
   sched();render();
 }
 function exportCSV(){
-  const rows=[['Week','Habit','Goal','Mon','Tue','Wed','Thu','Fri','Sat','Sun','Score%']];
-  for(let w=1;w<=WKS;w++)S.habits.forEach(h=>{
-    const gn=(S.goals.find(g=>g.id===h.goalId)||{}).name||'';
-    const days=DAYS.map((_,di)=>isCk(w,h.id,di)?1:0);
-    rows.push([w,h.name,gn,...days,Math.round(days.reduce((a,b)=>a+b,0)/7*100)]);
-  });
+  const rows=[['Week','Week start','Week end','Habit','Goal','Mon','Tue','Wed','Thu','Fri','Sat','Sun','Score%']];
+  for(let w=1;w<=WKS;w++){
+    const wst=weekStart(w);
+    const wen=weekEnd(w);
+    const wstStr=fmtDate(wst,true);
+    const wenStr=fmtDate(wen,true);
+    S.habits.forEach(h=>{
+      const gn=(S.goals.find(g=>g.id===h.goalId)||{}).name||'';
+      const days=DAYS.map((_,di)=>isCk(w,h.id,di)?1:0);
+      rows.push([w,wstStr,wenStr,h.name,gn,...days,Math.round(days.reduce((a,b)=>a+b,0)/7*100)]);
+    });
+  }
   const csv=rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
