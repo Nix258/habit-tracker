@@ -213,7 +213,7 @@ const WKS=12;
 const LKEY='habit_tracker_nick_v3';
 const DFILE='habit_tracker_data.json';
 const CLIENT_ID='252560527754-rpr438pbj1ude16sa34cu3r3elik3oqj.apps.googleusercontent.com';
-const SCOPE='https://www.googleapis.com/auth/drive.appdata';
+const SCOPE='https://www.googleapis.com/auth/drive.file';
 
 const DEF={
   startDate:new Date().toISOString().slice(0,10),
@@ -442,10 +442,18 @@ function onGisLoad(){
     callback:(resp)=>{
       if(resp.error){console.warn('Auth error:',resp);return;}
       accessToken=resp.access_token;
-      setSS('ok');
+      localStorage.setItem('ht_autoconnect','1');
+      setSS('busy','connecting...');
       loadDrive();
     }
   });
+  // Auto-connect silently if user has connected before
+  if(localStorage.getItem('ht_autoconnect')==='1'){
+    setTimeout(()=>{
+      try{tokenClient.requestAccessToken({prompt:''});}
+      catch(e){console.warn('Silent auth failed:',e);}
+    },800);
+  }
 }
 
 function onGapiLoad(){
@@ -456,7 +464,7 @@ function onGapiLoad(){
 
 function signIn(){
   if(!gisLoaded||!tokenClient){alert('Google sign-in is still initialising. Please wait a moment and try again.');return;}
-  tokenClient.requestAccessToken({prompt:'consent'});
+  tokenClient.requestAccessToken({prompt:'select_account'});
 }
 
 function signOut(){
@@ -465,6 +473,7 @@ function signOut(){
     accessToken=null;
     dfid=null;
   }
+  localStorage.removeItem('ht_autoconnect');
   setSS('off');
 }
 
@@ -476,7 +485,9 @@ async function driveRequest(method,url,body,isJson){
 }
 
 async function findFile(){
-  const r=await driveRequest('GET',`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name%3D'${DFILE}'&fields=files(id)`);
+  // Search in root Drive (not appDataFolder) for reliability across devices
+  const q=encodeURIComponent(`name='${DFILE}' and trashed=false`);
+  const r=await driveRequest('GET',`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)&spaces=drive`);
   const d=await r.json();
   return d.files&&d.files.length?d.files[0].id:null;
 }
@@ -484,12 +495,21 @@ async function findFile(){
 async function loadDrive(){
   try{
     const fid=await findFile();
-    if(!fid){setSS('ok','no existing data found — starting fresh');return;}
+    if(!fid){
+      setSS('ok','no existing data found — will save on next tick');
+      return;
+    }
     dfid=fid;
     const r=await driveRequest('GET',`https://www.googleapis.com/drive/v3/files/${fid}?alt=media`);
     const text=await r.text();
-    S=JSON.parse(text);saveLocal();render();setSS('ok','loaded from Drive');
-  }catch(e){console.warn('Drive load:',e);setSS('ok','load failed — using local data');}
+    S=JSON.parse(text);
+    saveLocal();
+    render();
+    setSS('ok','loaded from Drive');
+  }catch(e){
+    console.warn('Drive load:',e);
+    setSS('ok','load failed — using local data');
+  }
 }
 
 async function saveDrive(){
@@ -497,16 +517,21 @@ async function saveDrive(){
   try{
     const body=JSON.stringify(S);
     if(!dfid){
+      // Create file in root Drive so it's visible and findable from any device
       const fm=new FormData();
-      fm.append('metadata',new Blob([JSON.stringify({name:DFILE,parents:['appDataFolder']})],{type:'application/json'}));
+      fm.append('metadata',new Blob([JSON.stringify({name:DFILE})],{type:'application/json'}));
       fm.append('file',new Blob([body],{type:'application/json'}));
       const r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{Authorization:'Bearer '+accessToken},body:fm});
-      dfid=(await r.json()).id;
+      const d=await r.json();
+      dfid=d.id;
     }else{
       await driveRequest('PATCH',`https://www.googleapis.com/upload/drive/v3/files/${dfid}?uploadType=media`,body,true);
     }
     setSS('ok','saved just now');
-  }catch(e){console.warn('Drive save:',e);setSS('ok','save failed — check connection');}
+  }catch(e){
+    console.warn('Drive save:',e);
+    setSS('ok','save failed — check connection');
+  }
 }
 
 loadLocal();render();
