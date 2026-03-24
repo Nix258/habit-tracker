@@ -157,6 +157,8 @@
     <div id="week-tabs" style="display:flex;gap:5px;flex-wrap:wrap;"></div>
   </div>
 
+  <div id="week-date-bar" style="font-size:13px;color:var(--text2);margin-bottom:10px;padding:0 2px;"></div>
+
   <div class="tracker-wrap">
     <table>
       <thead><tr>
@@ -291,7 +293,7 @@ function renderTabs(){
     const b=document.createElement('button');
     b.className=`wk-tab${act?' active':''}${hd&&!act?' has':''}`;
     b.textContent=hd&&!act?`W${w} ${s}%`:`W${w}`;
-    b.onclick=()=>{S.currentWeek=w;saveLocal();render();};
+    b.onclick=()=>{S.currentWeek=w;saveLocal();renderTabs();renderWeekDateBar();renderRows();renderReview();renderMetrics();};
     c.appendChild(b);
   }
 }
@@ -357,13 +359,63 @@ function renderBars(){
   });
 }
 
-function renderDateRange(){
-  const st=new Date(S.startDate),en=new Date(st);en.setDate(en.getDate()+83);
-  const f=d=>d.toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'});
-  document.getElementById('date-range').textContent=`${f(st)} — ${f(en)}`;
+function nearestMonday(dateStr){
+  const d=new Date(dateStr);
+  const day=d.getDay(); // 0=Sun,1=Mon...
+  const diff=day===0?-6:1-day; // roll back to Monday
+  d.setDate(d.getDate()+diff);
+  return d.toISOString().slice(0,10);
 }
 
-function render(){renderDateRange();renderGoals();renderTabs();renderRows();renderReview();renderMetrics();renderBars();}
+function weekStart(w){
+  const d=new Date(S.startDate);
+  d.setDate(d.getDate()+(w-1)*7);
+  return d;
+}
+
+function weekEnd(w){
+  const d=weekStart(w);
+  d.setDate(d.getDate()+6);
+  return d;
+}
+
+function fmtDate(d,includeYear){
+  return d.toLocaleDateString('en-AU',{day:'numeric',month:'short',...(includeYear?{year:'numeric'}:{})});
+}
+
+function renderDateRange(){
+  const st=new Date(S.startDate);
+  const en=weekEnd(12);
+  const stStr=fmtDate(st,true);
+  const enStr=fmtDate(en,true);
+  document.getElementById('date-range').innerHTML=
+    `${stStr} — ${enStr} &nbsp;<button onclick="editStartDate()" style="font-size:11px;color:var(--green);background:none;border:none;cursor:pointer;font-family:inherit;padding:0;">edit start date</button>`;
+}
+
+function renderWeekDateBar(){
+  const w=S.currentWeek;
+  const st=weekStart(w);
+  const en=weekEnd(w);
+  const f=d=>d.toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'});
+  document.getElementById('week-date-bar').textContent=`Week ${w}  ·  ${f(st)} — ${f(en)}`;
+}
+
+function editStartDate(){
+  const current=S.startDate;
+  const input=prompt('Enter new start date (any date — it will snap to the nearest Monday):\nFormat: YYYY-MM-DD e.g. 2026-03-23',current);
+  if(!input)return;
+  const snapped=nearestMonday(input);
+  if(!snapped||isNaN(new Date(snapped).getTime())){alert('Invalid date — please use YYYY-MM-DD format.');return;}
+  S.startDate=snapped;
+  sched();render();
+}
+
+function render(){
+  // Snap start date to Monday if not already
+  const snapped=nearestMonday(S.startDate);
+  if(snapped!==S.startDate){S.startDate=snapped;}
+  renderDateRange();renderGoals();renderTabs();renderWeekDateBar();renderRows();renderReview();renderMetrics();renderBars();
+}
 
 function showAddHabit(){
   const sel=document.getElementById('new-goal');
@@ -430,7 +482,8 @@ function setSS(state,msg){
   const si=document.getElementById('signin-btn'),so=document.getElementById('signout-btn');
   if(state==='ok'){dot.className='sync-dot ok';txt.innerHTML=`<b>Connected to Google Drive</b> — ${msg||'syncing automatically'}`;si.style.display='none';so.style.display='';}
   else if(state==='busy'){dot.className='sync-dot busy';txt.innerHTML=`<b>Saving to Google Drive...</b>`;}
-  else{dot.className='sync-dot';txt.innerHTML=`<b>Not connected to Google Drive</b> — data saves in this browser only`;si.style.display='';so.style.display='none';}
+  else if(state==='returning'){dot.className='sync-dot';txt.innerHTML=`<b>Google Drive</b> — click to reconnect`;si.textContent='Reconnect';si.style.display='';so.style.display='none';}
+  else{dot.className='sync-dot';txt.innerHTML=`<b>Not connected to Google Drive</b> — data saves in this browser only`;si.textContent='Connect Google Drive';si.style.display='';so.style.display='none';}
 }
 
 function onGisLoad(){
@@ -446,12 +499,9 @@ function onGisLoad(){
       loadDrive();
     }
   });
-  // Auto-connect silently if user has connected before
+  // Show reconnect button if user has connected before
   if(localStorage.getItem('ht_autoconnect')==='1'){
-    setTimeout(()=>{
-      try{tokenClient.requestAccessToken({prompt:''});}
-      catch(e){console.warn('Silent auth failed:',e);}
-    },800);
+    setSS('returning');
   }
 }
 
@@ -463,7 +513,8 @@ function onGapiLoad(){
 
 function signIn(){
   if(!gisLoaded||!tokenClient){alert('Google sign-in is still initialising. Please wait a moment and try again.');return;}
-  tokenClient.requestAccessToken({prompt:'select_account'});
+  const isReturning=localStorage.getItem('ht_autoconnect')==='1';
+  tokenClient.requestAccessToken({prompt: isReturning ? '' : 'select_account'});
 }
 
 function signOut(){
@@ -512,8 +563,7 @@ async function loadDrive(){
 }
 
 async function saveDrive(){
-  console.log('saveDrive called, accessToken=',accessToken?'SET':'NULL','dfid=',dfid);
-  if(!accessToken){console.warn('saveDrive: no accessToken, aborting');return;}
+  if(!accessToken)return;
   try{
     setSS('busy');
     const body=JSON.stringify(S);
@@ -523,15 +573,13 @@ async function saveDrive(){
       fm.append('file',new Blob([body],{type:'application/json'}));
       const r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{Authorization:'Bearer '+accessToken},body:fm});
       const d=await r.json();
-      console.log('Created Drive file:',d);
       dfid=d.id;
     }else{
-      const r=await driveRequest('PATCH',`https://www.googleapis.com/upload/drive/v3/files/${dfid}?uploadType=media`,body,true);
-      console.log('Updated Drive file, status:',r.status);
+      await driveRequest('PATCH',`https://www.googleapis.com/upload/drive/v3/files/${dfid}?uploadType=media`,body,true);
     }
     setSS('ok','saved just now');
   }catch(e){
-    console.warn('Drive save error:',e);
+    console.warn('Drive save:',e);
     setSS('ok','save failed — check connection');
   }
 }
