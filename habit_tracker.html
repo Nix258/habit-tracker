@@ -16,8 +16,8 @@
     --text: #1e1d1b; --text2: #6b6860; --text3: #a8a69f;
     --radius: 12px; --radius-sm: 8px;
   }
-  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
-  .app { max-width: 1000px; margin: 0 auto; padding: 2rem 1.25rem 3rem; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 16px; }
+  .app { max-width: 1000px; margin: 0 auto; padding: 2rem 1.5rem 3rem; }
   .page-title { font-family: 'DM Serif Display', serif; font-size: 28px; font-weight: 400; color: var(--text); letter-spacing: -0.3px; }
   .page-sub { font-size: 12px; color: var(--text3); margin-top: 3px; margin-bottom: 1.5rem; }
   .sync-bar { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 8px 14px; margin-bottom: 1.5rem; flex-wrap: wrap; }
@@ -420,7 +420,12 @@ document.getElementById('r-improve').addEventListener('input',function(){
   S.reviews[S.currentWeek].improve=this.value;sched();
 });
 
-// Google Drive sync
+// Google Drive sync — using modern Google Identity Services + fetch
+let accessToken=null;
+let tokenClient=null;
+let gisLoaded=false;
+let gapiLoaded=false;
+
 function setSS(state,msg){
   const dot=document.getElementById('sdot'),txt=document.getElementById('stxt');
   const si=document.getElementById('signin-btn'),so=document.getElementById('signout-btn');
@@ -428,38 +433,77 @@ function setSS(state,msg){
   else if(state==='busy'){dot.className='sync-dot busy';txt.innerHTML=`<b>Saving to Google Drive...</b>`;}
   else{dot.className='sync-dot';txt.innerHTML=`<b>Not connected to Google Drive</b> — data saves in this browser only`;si.style.display='';so.style.display='none';}
 }
-function signIn(){if(!gapiOK){alert('Google API still loading, please try again in a moment.');return;}gapi.auth2.getAuthInstance().signIn();}
-function signOut(){if(gapiOK)gapi.auth2.getAuthInstance().signOut();}
-function onAuth(in_){if(in_){setSS('ok');loadDrive();}else{setSS('off');}}
-function initGapi(){
-  gapi.client.init({clientId:CLIENT_ID,scope:SCOPE,discoveryDocs:['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest']})
-  .then(()=>{gapiOK=true;gapi.auth2.getAuthInstance().isSignedIn.listen(onAuth);if(gapi.auth2.getAuthInstance().isSignedIn.get()){setSS('ok');loadDrive();}})
-  .catch(e=>console.warn('gapi init:',e));
+
+function onGisLoad(){
+  gisLoaded=true;
+  tokenClient=google.accounts.oauth2.initTokenClient({
+    client_id:CLIENT_ID,
+    scope:SCOPE,
+    callback:(resp)=>{
+      if(resp.error){console.warn('Auth error:',resp);return;}
+      accessToken=resp.access_token;
+      setSS('ok');
+      loadDrive();
+    }
+  });
 }
+
+function onGapiLoad(){
+  gapi.load('client',()=>{
+    gapi.client.init({}).then(()=>{gapiLoaded=true;});
+  });
+}
+
+function signIn(){
+  if(!gisLoaded||!tokenClient){alert('Google sign-in is still initialising. Please wait a moment and try again.');return;}
+  tokenClient.requestAccessToken({prompt:'consent'});
+}
+
+function signOut(){
+  if(accessToken){
+    google.accounts.oauth2.revoke(accessToken,()=>{});
+    accessToken=null;
+    dfid=null;
+  }
+  setSS('off');
+}
+
+async function driveRequest(method,url,body,isJson){
+  const headers={Authorization:'Bearer '+accessToken};
+  if(isJson)headers['Content-Type']='application/json';
+  const r=await fetch(url,{method,headers,body});
+  return r;
+}
+
 async function findFile(){
-  const r=await gapi.client.drive.files.list({spaces:'appDataFolder',q:`name='${DFILE}'`,fields:'files(id)'});
-  return r.result.files&&r.result.files.length?r.result.files[0].id:null;
+  const r=await driveRequest('GET',`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name%3D'${DFILE}'&fields=files(id)`);
+  const d=await r.json();
+  return d.files&&d.files.length?d.files[0].id:null;
 }
+
 async function loadDrive(){
   try{
-    const fid=await findFile();if(!fid)return;dfid=fid;
-    const r=await gapi.client.drive.files.get({fileId:fid,alt:'media'});
-    S=JSON.parse(r.body);saveLocal();render();setSS('ok','loaded from Drive');
-  }catch(e){console.warn('Drive load:',e);}
+    const fid=await findFile();
+    if(!fid){setSS('ok','no existing data found — starting fresh');return;}
+    dfid=fid;
+    const r=await driveRequest('GET',`https://www.googleapis.com/drive/v3/files/${fid}?alt=media`);
+    const text=await r.text();
+    S=JSON.parse(text);saveLocal();render();setSS('ok','loaded from Drive');
+  }catch(e){console.warn('Drive load:',e);setSS('ok','load failed — using local data');}
 }
+
 async function saveDrive(){
-  if(!gapiOK||!gapi.auth2.getAuthInstance().isSignedIn.get())return;
+  if(!accessToken)return;
   try{
     const body=JSON.stringify(S);
-    const tok=gapi.auth2.getAuthInstance().currentUser.get().getAuthResponse().access_token;
     if(!dfid){
       const fm=new FormData();
       fm.append('metadata',new Blob([JSON.stringify({name:DFILE,parents:['appDataFolder']})],{type:'application/json'}));
       fm.append('file',new Blob([body],{type:'application/json'}));
-      const r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{Authorization:'Bearer '+tok},body:fm});
+      const r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{Authorization:'Bearer '+accessToken},body:fm});
       dfid=(await r.json()).id;
     }else{
-      await fetch(`https://www.googleapis.com/upload/drive/v3/files/${dfid}?uploadType=media`,{method:'PATCH',headers:{Authorization:'Bearer '+tok,'Content-Type':'application/json'},body});
+      await driveRequest('PATCH',`https://www.googleapis.com/upload/drive/v3/files/${dfid}?uploadType=media`,body,true);
     }
     setSS('ok','saved just now');
   }catch(e){console.warn('Drive save:',e);setSS('ok','save failed — check connection');}
@@ -467,6 +511,7 @@ async function saveDrive(){
 
 loadLocal();render();
 </script>
-<script src="https://apis.google.com/js/api.js" onload="gapi.load('client:auth2',initGapi)"></script>
+<script src="https://apis.google.com/js/api.js" onload="onGapiLoad()"></script>
+<script src="https://accounts.google.com/gsi/client" onload="onGisLoad()"></script>
 </body>
 </html>
