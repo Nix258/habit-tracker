@@ -214,6 +214,7 @@ const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const WKS=12;
 const LKEY='habit_tracker_nick_v3';
 const DFILE='habit_tracker_data.json';
+const TRACKER_FOLDER='1jx-Ai-8HWD4PUeopoHAS8z_D783w2F7h';
 const CLIENT_ID='252560527754-rpr438pbj1ude16sa34cu3r3elik3oqj.apps.googleusercontent.com';
 const SCOPE='https://www.googleapis.com/auth/drive.file';
 
@@ -541,8 +542,7 @@ async function driveRequest(method,url,body,isJson){
 }
 
 async function findFile(){
-  // Search in root Drive (not appDataFolder) for reliability across devices
-  const q=encodeURIComponent(`name='${DFILE}' and trashed=false`);
+  const q=encodeURIComponent(`name='${DFILE}' and '${TRACKER_FOLDER}' in parents and trashed=false`);
   const r=await driveRequest('GET',`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)&spaces=drive`);
   const d=await r.json();
   return d.files&&d.files.length?d.files[0].id:null;
@@ -575,7 +575,7 @@ async function saveDrive(){
     const body=JSON.stringify(S);
     if(!dfid){
       const fm=new FormData();
-      fm.append('metadata',new Blob([JSON.stringify({name:DFILE})],{type:'application/json'}));
+      fm.append('metadata',new Blob([JSON.stringify({name:DFILE,parents:[TRACKER_FOLDER]})],{type:'application/json'}));
       fm.append('file',new Blob([body],{type:'application/json'}));
       const r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{Authorization:'Bearer '+accessToken},body:fm});
       const d=await r.json();
