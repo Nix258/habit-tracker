@@ -234,7 +234,7 @@ const DEF={
 };
 
 let S=JSON.parse(JSON.stringify(DEF));
-let dfid=null, saveT=null;
+let dfid=null, saveT=null, accessToken=null;
 
 function loadLocal(){try{const r=localStorage.getItem(LKEY);if(r)S=JSON.parse(r);}catch(e){}}
 function saveLocal(){try{localStorage.setItem(LKEY,JSON.stringify(S));}catch(e){}}
@@ -421,7 +421,6 @@ document.getElementById('r-improve').addEventListener('input',function(){
 });
 
 // Google Drive sync — using modern Google Identity Services + fetch
-let accessToken=null;
 let tokenClient=null;
 let gisLoaded=false;
 let gapiLoaded=false;
@@ -513,23 +512,26 @@ async function loadDrive(){
 }
 
 async function saveDrive(){
-  if(!accessToken)return;
+  console.log('saveDrive called, accessToken=',accessToken?'SET':'NULL','dfid=',dfid);
+  if(!accessToken){console.warn('saveDrive: no accessToken, aborting');return;}
   try{
+    setSS('busy');
     const body=JSON.stringify(S);
     if(!dfid){
-      // Create file in root Drive so it's visible and findable from any device
       const fm=new FormData();
       fm.append('metadata',new Blob([JSON.stringify({name:DFILE})],{type:'application/json'}));
       fm.append('file',new Blob([body],{type:'application/json'}));
       const r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{Authorization:'Bearer '+accessToken},body:fm});
       const d=await r.json();
+      console.log('Created Drive file:',d);
       dfid=d.id;
     }else{
-      await driveRequest('PATCH',`https://www.googleapis.com/upload/drive/v3/files/${dfid}?uploadType=media`,body,true);
+      const r=await driveRequest('PATCH',`https://www.googleapis.com/upload/drive/v3/files/${dfid}?uploadType=media`,body,true);
+      console.log('Updated Drive file, status:',r.status);
     }
     setSS('ok','saved just now');
   }catch(e){
-    console.warn('Drive save:',e);
+    console.warn('Drive save error:',e);
     setSS('ok','save failed — check connection');
   }
 }
