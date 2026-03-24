@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>12-Week Habit Tracker</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --green: #1d9e75; --green-dark: #0f6e56; --green-light: #e1f5ee;
+    --amber: #ba7517; --amber-light: #faeeda;
+    --red: #d85a30; --red-light: #faece7;
+    --bg: #f5f3ef; --surface: #ffffff; --surface2: #f8f7f4;
+    --border: #e0ddd6; --border2: #ccc9c0;
+    --text: #1e1d1b; --text2: #6b6860; --text3: #a8a69f;
+    --radius: 12px; --radius-sm: 8px;
+  }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  .app { max-width: 1000px; margin: 0 auto; padding: 2rem 1.25rem 3rem; }
+  .page-title { font-family: 'DM Serif Display', serif; font-size: 28px; font-weight: 400; color: var(--text); letter-spacing: -0.3px; }
+  .page-sub { font-size: 12px; color: var(--text3); margin-top: 3px; margin-bottom: 1.5rem; }
+  .sync-bar { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 8px 14px; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .sync-status { font-size: 12px; color: var(--text2); flex: 1; min-width: 160px; }
+  .sync-status b { font-weight: 500; }
+  .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text3); flex-shrink: 0; }
+  .sync-dot.ok { background: var(--green); }
+  .sync-dot.busy { background: var(--amber); animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.3} }
+  .btn-sm { padding: 5px 12px; border-radius: 6px; border: 0.5px solid var(--border2); background: var(--surface); font-family: inherit; font-size: 12px; color: var(--text2); cursor: pointer; transition: background 0.15s; white-space: nowrap; }
+  .btn-sm:hover { background: var(--surface2); }
+  .btn-sm.go { background: var(--green); border-color: var(--green); color: #fff; }
+  .btn-sm.go:hover { background: var(--green-dark); }
+  .top-row { display: grid; grid-template-columns: 290px 1fr; gap: 14px; margin-bottom: 1.5rem; }
+  @media(max-width:660px){ .top-row { grid-template-columns: 1fr; } }
+  .card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 1.1rem 1.25rem; }
+  .card-lbl { font-size: 10px; font-weight: 600; letter-spacing: 0.07em; color: var(--text3); text-transform: uppercase; margin-bottom: 10px; }
+  .goal-item { margin-bottom: 4px; }
+  .goal-hdr { display: flex; align-items: center; gap: 6px; cursor: pointer; padding: 4px 0; }
+  .goal-arrow { font-size: 9px; color: var(--text3); transition: transform 0.18s; flex-shrink: 0; user-select: none; line-height: 1; }
+  .goal-arrow.open { transform: rotate(90deg); }
+  .goal-name-inp { border: none; outline: none; font-family: inherit; font-size: 13px; font-weight: 500; color: var(--text); background: transparent; flex: 1; }
+  .goal-name-inp:focus { color: var(--green); }
+  .goal-habits { padding: 2px 0 2px 16px; display: none; }
+  .goal-habits.open { display: block; }
+  .ghab { font-size: 11px; color: var(--text2); padding: 2px 0; display: flex; align-items: center; gap: 5px; }
+  .ghab::before { content:''; width:4px; height:4px; border-radius:50%; background:var(--green); flex-shrink:0; }
+  .metrics-card { display: flex; flex-direction: column; justify-content: space-between; }
+  .metrics-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 14px; }
+  .metric { text-align: center; }
+  .metric-val { font-size: 26px; font-weight: 300; color: var(--text); line-height: 1; }
+  .metric-val.good { color: var(--green); }
+  .metric-lbl { font-size: 10px; color: var(--text3); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .mini-bars { display: grid; grid-template-columns: repeat(12,1fr); gap: 3px; height: 36px; align-items: end; }
+  .mbar-wrap { display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; }
+  .mbar-bg { width: 100%; background: var(--surface2); border: 0.5px solid var(--border); border-radius: 2px 2px 0 0; height: 100%; display: flex; align-items: flex-end; }
+  .mbar-fill { width: 100%; border-radius: 2px 2px 0 0; transition: height 0.35s ease; }
+  .mbar-lbl { font-size: 8px; color: var(--text3); margin-top: 2px; }
+  .week-nav { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 1rem; }
+  .wk-lbl { font-size: 11px; color: var(--text3); font-weight: 500; margin-right: 2px; }
+  .wk-tab { padding: 4px 10px; border-radius: 20px; border: 0.5px solid var(--border); background: var(--surface); font-family: inherit; font-size: 11px; cursor: pointer; color: var(--text2); transition: all 0.12s; }
+  .wk-tab:hover { background: var(--green-light); border-color: var(--green); color: var(--green-dark); }
+  .wk-tab.active { background: var(--green); border-color: var(--green); color: #fff; font-weight: 500; }
+  .wk-tab.has { border-color: var(--green); color: var(--green-dark); }
+  .tracker-wrap { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 1rem; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; min-width: 560px; }
+  thead th { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; background: var(--surface2); padding: 8px 6px; text-align: center; border-bottom: 0.5px solid var(--border); }
+  thead th.hcol { text-align: left; padding-left: 14px; min-width: 170px; }
+  tbody td { padding: 6px; text-align: center; border-bottom: 0.5px solid #f5f3ef; vertical-align: middle; }
+  tbody td.hcell { text-align: left; padding-left: 14px; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: #fafaf8; }
+  .hab-inp { border: none; outline: none; font-family: inherit; font-size: 13px; color: var(--text); background: transparent; width: 100%; }
+  .hab-inp:focus { color: var(--green); }
+  .goal-tag { font-size: 9px; color: var(--text3); display: block; margin-top: 1px; }
+  .del-btn { font-size: 11px; color: var(--border2); background: none; border: none; cursor: pointer; padding: 0 4px; transition: color 0.15s; }
+  .del-btn:hover { color: var(--red); }
+  .goal-sel { border: none; outline: none; font-family: inherit; font-size: 9px; color: var(--text3); background: transparent; cursor: pointer; max-width: 130px; padding: 0; margin-top: 1px; }
+  .goal-sel:hover { color: var(--green); }
+  .chk { width: 22px; height: 22px; border-radius: 5px; border: 1.5px solid var(--border2); background: var(--surface); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.12s; flex-shrink: 0; }
+  .chk:hover { border-color: var(--green); background: var(--green-light); }
+  .chk.on { background: var(--green); border-color: var(--green); }
+  .chk.on::after { content:''; display:block; width:5px; height:9px; border:2px solid #fff; border-top:none; border-left:none; transform:rotate(45deg) translate(-1px,-1px); }
+  .spill { font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 10px; display: inline-block; white-space: nowrap; }
+  .sp-g { background: var(--green-light); color: var(--green-dark); }
+  .sp-a { background: var(--amber-light); color: var(--amber); }
+  .sp-r { background: var(--red-light); color: var(--red); }
+  .sp-n { background: var(--surface2); color: var(--text3); }
+  tfoot td { padding: 8px 14px; }
+  .add-btn { font-size: 12px; color: var(--green); cursor: pointer; background: none; border: none; font-family: inherit; display: inline-flex; align-items: center; gap: 5px; }
+  .add-btn:hover { color: var(--green-dark); }
+  .review-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1rem; }
+  .review-top { display: flex; align-items: flex-start; gap: 1.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+  .rev-num { font-family: 'DM Serif Display', serif; font-size: 52px; line-height: 1; color: var(--green); }
+  .rev-num.a { color: var(--amber); }
+  .rev-num.r { color: var(--red); }
+  .rev-num.n { color: var(--text3); }
+  .rev-lbl { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .rev-bar-wrap { flex: 1; min-width: 100px; padding-top: 10px; }
+  .rev-bar-bg { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; border: 0.5px solid var(--border); margin-bottom: 4px; }
+  .rev-bar-fill { height: 100%; border-radius: 3px; transition: width 0.35s ease; }
+  .rev-target { font-size: 10px; color: var(--text3); }
+  .rev-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media(max-width:480px){ .rev-fields { grid-template-columns: 1fr; } }
+  .rev-field label { font-size: 10px; font-weight: 600; letter-spacing: 0.06em; color: var(--text3); text-transform: uppercase; display: block; margin-bottom: 5px; }
+  .rev-field textarea { width: 100%; border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 7px 9px; font-family: inherit; font-size: 12px; color: var(--text); resize: none; min-height: 58px; outline: none; background: var(--surface2); line-height: 1.5; }
+  .rev-field textarea:focus { border-color: var(--green); background: #fff; }
+  .bot-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn { padding: 8px 16px; border-radius: var(--radius-sm); border: 0.5px solid var(--border2); background: var(--surface); font-family: inherit; font-size: 12px; color: var(--text2); cursor: pointer; transition: background 0.15s; }
+  .btn:hover { background: var(--surface2); }
+  .btn.pri { background: var(--green); border-color: var(--green); color: #fff; font-weight: 500; }
+  .btn.pri:hover { background: var(--green-dark); }
+  .btn.dan { color: var(--red); border-color: #f5c4b3; }
+  .btn.dan:hover { background: var(--red-light); }
+  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 100; align-items: center; justify-content: center; }
+  .modal-bg.open { display: flex; }
+  .modal { background: var(--surface); border-radius: var(--radius); padding: 1.5rem; max-width: 400px; width: 92%; }
+  .modal h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+  .modal p { font-size: 12px; color: var(--text2); line-height: 1.6; margin-bottom: 12px; }
+  .modal input, .modal select { width: 100%; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); padding: 8px 10px; font-family: inherit; font-size: 13px; color: var(--text); outline: none; margin-bottom: 10px; background: var(--surface); }
+  .modal input:focus, .modal select:focus { border-color: var(--green); }
+  .modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="page-title">12-week habit tracker</div>
+  <div class="page-sub" id="date-range"></div>
+
+  <div class="sync-bar">
+    <div class="sync-dot" id="sdot"></div>
+    <div class="sync-status" id="stxt"><b>Not connected to Google Drive</b> — data saves in this browser only</div>
+    <button class="btn-sm go" id="signin-btn" onclick="signIn()">Connect Google Drive</button>
+    <button class="btn-sm" id="signout-btn" onclick="signOut()" style="display:none">Disconnect</button>
+  </div>
+
+  <div class="top-row">
+    <div class="card">
+      <div class="card-lbl">Goals &amp; habits</div>
+      <div id="goals-list"></div>
+    </div>
+    <div class="card metrics-card">
+      <div class="metrics-row" id="metrics-row"></div>
+      <div>
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">12-week overview</div>
+        <div class="mini-bars" id="mini-bars"></div>
+        <div style="display:flex;justify-content:space-between;margin-top:3px;">
+          <span style="font-size:9px;color:var(--text3)">Wk 1</span>
+          <span style="font-size:9px;color:var(--text3)">Wk 12</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="week-nav">
+    <span class="wk-lbl">Week</span>
+    <div id="week-tabs" style="display:flex;gap:5px;flex-wrap:wrap;"></div>
+  </div>
+
+  <div class="tracker-wrap">
+    <table>
+      <thead><tr>
+        <th class="hcol">Habit / goal</th>
+        <th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th>
+        <th>Score</th><th></th>
+      </tr></thead>
+      <tbody id="habit-tbody"></tbody>
+      <tfoot><tr><td colspan="10"><button class="add-btn" onclick="showAddHabit()">+ Add habit</button></td></tr></tfoot>
+    </table>
+  </div>
+
+  <div class="review-card">
+    <div class="card-lbl">Week <span id="rev-wk">1</span> review</div>
+    <div class="review-top">
+      <div>
+        <div class="rev-num" id="rev-num">—</div>
+        <div class="rev-lbl">weekly score</div>
+      </div>
+      <div class="rev-bar-wrap">
+        <div class="rev-bar-bg"><div class="rev-bar-fill" id="rev-bar" style="width:0%;background:var(--text3)"></div></div>
+        <div class="rev-target">Target: 80% &nbsp;·&nbsp; <span id="rev-verdict"></span></div>
+      </div>
+    </div>
+    <div class="rev-fields">
+      <div class="rev-field"><label>What went well?</label><textarea id="r-well" placeholder="Reflect on your wins..." rows="3"></textarea></div>
+      <div class="rev-field"><label>How do I improve?</label><textarea id="r-improve" placeholder="What would I change?" rows="3"></textarea></div>
+    </div>
+  </div>
+
+  <div class="bot-row">
+    <button class="btn pri" onclick="exportCSV()">Export data as CSV</button>
+    <button class="btn" onclick="clearWeek()">Clear this week</button>
+    <button class="btn dan" onclick="resetAll()">Reset all data</button>
+  </div>
+</div>
+
+<div class="modal-bg" id="add-modal">
+  <div class="modal">
+    <h3>Add new habit</h3>
+    <p>Enter the habit name and which goal it supports.</p>
+    <input id="new-name" placeholder="Habit name..." />
+    <select id="new-goal"></select>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn pri" onclick="confirmAdd()">Add</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const WKS=12;
+const LKEY='habit_tracker_nick_v3';
+const DFILE='habit_tracker_data.json';
+const CLIENT_ID='252560527754-rpr438pbj1ude16sa34cu3r3elik3oqj.apps.googleusercontent.com';
+const SCOPE='https://www.googleapis.com/auth/drive.appdata';
+
+const DEF={
+  startDate:new Date().toISOString().slice(0,10),
+  currentWeek:1,
+  goals:[
+    {id:'g1',name:'Improve sleep pattern',open:false},
+    {id:'g2',name:'Get more things done',open:false},
+    {id:'g3',name:'Get weight under 82kg',open:false}
+  ],
+  habits:[
+    {id:'h1',name:'Outside exercise at 8am',goalId:'g1'},
+    {id:'h2',name:'In bed before 12:30am',goalId:'g1'},
+    {id:'h3',name:'Finish at least 1 Action',goalId:'g2'},
+    {id:'h4',name:'Exercise or activity',goalId:'g3'},
+    {id:'h5',name:'Fill in nutrition app',goalId:'g3'}
+  ],
+  checks:{},reviews:{}
+};
+
+let S=JSON.parse(JSON.stringify(DEF));
+let gapiOK=false, dfid=null, saveT=null;
+
+function loadLocal(){try{const r=localStorage.getItem(LKEY);if(r)S=JSON.parse(r);}catch(e){}}
+function saveLocal(){try{localStorage.setItem(LKEY,JSON.stringify(S));}catch(e){}}
+function sched(){saveLocal();if(gapiOK){setSS('busy');clearTimeout(saveT);saveT=setTimeout(saveDrive,1400);}}
+
+function ck(w,hid,di){return`w${w}_${hid}_d${di}`;}
+function isCk(w,hid,di){return!!S.checks[ck(w,hid,di)];}
+
+function toggle(w,hid,di){
+  const k=ck(w,hid,di);
+  S.checks[k]=!S.checks[k];
+  sched();
+  renderRows();renderReview();renderMetrics();renderBars();renderTabs();
+}
+
+function wkScore(w){
+  if(!S.habits.length)return null;
+  let done=0;
+  S.habits.forEach(h=>DAYS.forEach((_,di)=>{if(isCk(w,h.id,di))done++;}));
+  return Math.round(done/(S.habits.length*7)*100);
+}
+
+function scCls(p){
+  if(p===null||p===0)return'sp-n';
+  return p>=80?'sp-g':p>=50?'sp-a':'sp-r';
+}
+
+function renderGoals(){
+  const el=document.getElementById('goals-list');
+  el.innerHTML='';
+  S.goals.forEach(g=>{
+    const habs=S.habits.filter(h=>h.goalId===g.id);
+    const d=document.createElement('div');
+    d.className='goal-item';
+    d.innerHTML=`
+      <div class="goal-hdr" onclick="togGoal('${g.id}')">
+        <span class="goal-arrow${g.open?' open':''}" id="arr-${g.id}">&#9658;</span>
+        <input class="goal-name-inp" value="${g.name}" onclick="event.stopPropagation()" onchange="rnGoal('${g.id}',this.value)" />
+      </div>
+      <div class="goal-habits${g.open?' open':''}" id="gh-${g.id}">
+        ${habs.length?habs.map(h=>`<div class="ghab">${h.name}</div>`).join(''):'<div style="font-size:11px;color:var(--text3);padding:2px 0">No habits yet</div>'}
+      </div>`;
+    el.appendChild(d);
+  });
+}
+
+function togGoal(gid){const g=S.goals.find(x=>x.id===gid);if(g){g.open=!g.open;}renderGoals();}
+function rnGoal(gid,v){const g=S.goals.find(x=>x.id===gid);if(g){g.name=v;sched();renderGoals();renderRows();}}
+
+function renderTabs(){
+  const c=document.getElementById('week-tabs');c.innerHTML='';
+  for(let w=1;w<=WKS;w++){
+    const s=wkScore(w),act=w===S.currentWeek,hd=s!==null&&s>0;
+    const b=document.createElement('button');
+    b.className=`wk-tab${act?' active':''}${hd&&!act?' has':''}`;
+    b.textContent=hd&&!act?`W${w} ${s}%`:`W${w}`;
+    b.onclick=()=>{S.currentWeek=w;saveLocal();render();};
+    c.appendChild(b);
+  }
+}
+
+function renderRows(){
+  const w=S.currentWeek,tb=document.getElementById('habit-tbody');
+  tb.innerHTML='';
+  S.habits.forEach(h=>{
+    const done=DAYS.filter((_,di)=>isCk(w,h.id,di)).length;
+    const pct=Math.round(done/7*100);
+    const goalOpts=S.goals.map(g=>`<option value="${g.id}"${g.id===h.goalId?' selected':''}>${g.name}</option>`).join('');
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td class="hcell">
+        <input class="hab-inp" value="${h.name}" onchange="rnHab('${h.id}',this.value)" title="Click to rename" />
+        <select class="goal-sel" onchange="reassignHabit('${h.id}',this.value)" title="Change goal">${goalOpts}</select>
+      </td>
+      ${DAYS.map((_,di)=>`<td><div class="chk${isCk(w,h.id,di)?' on':''}" onclick="toggle(${w},'${h.id}',${di})"></div></td>`).join('')}
+      <td><span class="spill ${scCls(done>0?pct:null)}">${done>0?pct+'%':'—'}</span></td>
+      <td><button class="del-btn" onclick="delHabit('${h.id}')" title="Remove habit">✕</button></td>`;
+    tb.appendChild(tr);
+  });
+}
+
+function renderReview(){
+  const w=S.currentWeek,pct=wkScore(w);
+  document.getElementById('rev-wk').textContent=w;
+  const n=document.getElementById('rev-num'),bar=document.getElementById('rev-bar'),v=document.getElementById('rev-verdict');
+  if(!pct){n.textContent='—';n.className='rev-num n';bar.style.width='0%';v.textContent='';}
+  else{
+    n.textContent=pct+'%';
+    n.className='rev-num'+(pct>=80?'':pct>=50?' a':' r');
+    bar.style.width=pct+'%';
+    bar.style.background=pct>=80?'var(--green)':pct>=50?'var(--amber)':'var(--red)';
+    v.textContent=pct>=80?'On track — great work':'Below 80% — consider adjusting habits';
+    v.style.color=pct>=80?'var(--green)':'var(--amber)';
+  }
+  const rev=S.reviews[w]||{};
+  document.getElementById('r-well').value=rev.well||'';
+  document.getElementById('r-improve').value=rev.improve||'';
+}
+
+function renderMetrics(){
+  const sc=[];for(let w=1;w<=WKS;w++){const s=wkScore(w);if(s!==null&&s>0)sc.push(s);}
+  const tw=wkScore(S.currentWeek),best=sc.length?Math.max(...sc):null,avg=sc.length?Math.round(sc.reduce((a,b)=>a+b,0)/sc.length):null;
+  document.getElementById('metrics-row').innerHTML=[
+    ['This week',tw&&tw>0?tw+'%':'—',tw>=80],
+    ['Best week',best!==null?best+'%':'—',best>=80],
+    ['12-wk avg',avg!==null?avg+'%':'—',avg>=80]
+  ].map(([l,v,g])=>`<div class="metric"><div class="metric-val${g?' good':''}">${v}</div><div class="metric-lbl">${l}</div></div>`).join('');
+}
+
+function renderBars(){
+  const c=document.getElementById('mini-bars');c.innerHTML='';
+  const sc=[];for(let w=1;w<=WKS;w++)sc.push(wkScore(w)||0);
+  const mx=Math.max(...sc,1);
+  sc.forEach((s,i)=>{
+    const h=Math.round(s/mx*100);
+    const col=s>=80?'var(--green)':s>=50?'var(--amber)':s>0?'var(--red)':'transparent';
+    const d=document.createElement('div');d.className='mbar-wrap';d.title=`Week ${i+1}: ${s}%`;
+    d.innerHTML=`<div class="mbar-bg"><div class="mbar-fill" style="height:${h}%;background:${col}"></div></div><div class="mbar-lbl">${i+1}</div>`;
+    c.appendChild(d);
+  });
+}
+
+function renderDateRange(){
+  const st=new Date(S.startDate),en=new Date(st);en.setDate(en.getDate()+83);
+  const f=d=>d.toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'});
+  document.getElementById('date-range').textContent=`${f(st)} — ${f(en)}`;
+}
+
+function render(){renderDateRange();renderGoals();renderTabs();renderRows();renderReview();renderMetrics();renderBars();}
+
+function showAddHabit(){
+  const sel=document.getElementById('new-goal');
+  sel.innerHTML=S.goals.map(g=>`<option value="${g.id}">${g.name}</option>`).join('');
+  document.getElementById('new-name').value='';
+  document.getElementById('add-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('new-name').focus(),100);
+}
+function closeModal(){document.getElementById('add-modal').classList.remove('open');}
+function confirmAdd(){
+  const name=document.getElementById('new-name').value.trim();
+  const goalId=document.getElementById('new-goal').value;
+  if(!name)return;
+  S.habits.push({id:'h'+Date.now(),name,goalId});
+  sched();closeModal();render();
+}
+function rnHab(hid,v){const h=S.habits.find(x=>x.id===hid);if(h){h.name=v;sched();renderGoals();}}
+function reassignHabit(hid,gid){const h=S.habits.find(x=>x.id===hid);if(h){h.goalId=gid;sched();renderGoals();}}
+function delHabit(hid){
+  if(!confirm('Remove this habit? All its tick data will be deleted.'))return;
+  S.habits=S.habits.filter(x=>x.id!==hid);
+  Object.keys(S.checks).filter(k=>k.includes(`_${hid}_`)).forEach(k=>delete S.checks[k]);
+  sched();render();
+}
+function clearWeek(){
+  if(!confirm(`Clear all ticks for week ${S.currentWeek}?`))return;
+  S.habits.forEach(h=>DAYS.forEach((_,di)=>delete S.checks[ck(S.currentWeek,h.id,di)]));
+  sched();render();
+}
+function resetAll(){
+  if(!confirm('Reset ALL data? This cannot be undone.'))return;
+  S=JSON.parse(JSON.stringify(DEF));S.startDate=new Date().toISOString().slice(0,10);
+  sched();render();
+}
+function exportCSV(){
+  const rows=[['Week','Habit','Goal','Mon','Tue','Wed','Thu','Fri','Sat','Sun','Score%']];
+  for(let w=1;w<=WKS;w++)S.habits.forEach(h=>{
+    const gn=(S.goals.find(g=>g.id===h.goalId)||{}).name||'';
+    const days=DAYS.map((_,di)=>isCk(w,h.id,di)?1:0);
+    rows.push([w,h.name,gn,...days,Math.round(days.reduce((a,b)=>a+b,0)/7*100)]);
+  });
+  const csv=rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download='habit_tracker.csv';a.click();
+}
+
+document.getElementById('r-well').addEventListener('input',function(){
+  if(!S.reviews[S.currentWeek])S.reviews[S.currentWeek]={};
+  S.reviews[S.currentWeek].well=this.value;sched();
+});
+document.getElementById('r-improve').addEventListener('input',function(){
+  if(!S.reviews[S.currentWeek])S.reviews[S.currentWeek]={};
+  S.reviews[S.currentWeek].improve=this.value;sched();
+});
+
+// Google Drive sync
+function setSS(state,msg){
+  const dot=document.getElementById('sdot'),txt=document.getElementById('stxt');
+  const si=document.getElementById('signin-btn'),so=document.getElementById('signout-btn');
+  if(state==='ok'){dot.className='sync-dot ok';txt.innerHTML=`<b>Connected to Google Drive</b> — ${msg||'syncing automatically'}`;si.style.display='none';so.style.display='';}
+  else if(state==='busy'){dot.className='sync-dot busy';txt.innerHTML=`<b>Saving to Google Drive...</b>`;}
+  else{dot.className='sync-dot';txt.innerHTML=`<b>Not connected to Google Drive</b> — data saves in this browser only`;si.style.display='';so.style.display='none';}
+}
+function signIn(){if(!gapiOK){alert('Google API still loading, please try again in a moment.');return;}gapi.auth2.getAuthInstance().signIn();}
+function signOut(){if(gapiOK)gapi.auth2.getAuthInstance().signOut();}
+function onAuth(in_){if(in_){setSS('ok');loadDrive();}else{setSS('off');}}
+function initGapi(){
+  gapi.client.init({clientId:CLIENT_ID,scope:SCOPE,discoveryDocs:['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest']})
+  .then(()=>{gapiOK=true;gapi.auth2.getAuthInstance().isSignedIn.listen(onAuth);if(gapi.auth2.getAuthInstance().isSignedIn.get()){setSS('ok');loadDrive();}})
+  .catch(e=>console.warn('gapi init:',e));
+}
+async function findFile(){
+  const r=await gapi.client.drive.files.list({spaces:'appDataFolder',q:`name='${DFILE}'`,fields:'files(id)'});
+  return r.result.files&&r.result.files.length?r.result.files[0].id:null;
+}
+async function loadDrive(){
+  try{
+    const fid=await findFile();if(!fid)return;dfid=fid;
+    const r=await gapi.client.drive.files.get({fileId:fid,alt:'media'});
+    S=JSON.parse(r.body);saveLocal();render();setSS('ok','loaded from Drive');
+  }catch(e){console.warn('Drive load:',e);}
+}
+async function saveDrive(){
+  if(!gapiOK||!gapi.auth2.getAuthInstance().isSignedIn.get())return;
+  try{
+    const body=JSON.stringify(S);
+    const tok=gapi.auth2.getAuthInstance().currentUser.get().getAuthResponse().access_token;
+    if(!dfid){
+      const fm=new FormData();
+      fm.append('metadata',new Blob([JSON.stringify({name:DFILE,parents:['appDataFolder']})],{type:'application/json'}));
+      fm.append('file',new Blob([body],{type:'application/json'}));
+      const r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{Authorization:'Bearer '+tok},body:fm});
+      dfid=(await r.json()).id;
+    }else{
+      await fetch(`https://www.googleapis.com/upload/drive/v3/files/${dfid}?uploadType=media`,{method:'PATCH',headers:{Authorization:'Bearer '+tok,'Content-Type':'application/json'},body});
+    }
+    setSS('ok','saved just now');
+  }catch(e){console.warn('Drive save:',e);setSS('ok','save failed — check connection');}
+}
+
+loadLocal();render();
+</script>
+<script src="https://apis.google.com/js/api.js" onload="gapi.load('client:auth2',initGapi)"></script>
+</body>
+</html>
