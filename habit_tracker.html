@@ -124,7 +124,12 @@
 </head>
 <body>
 <div class="app">
-  <div class="page-title">12-week habit tracker</div>
+  <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:4px;">
+    <div class="page-title">Seasonal Habit Tracker</div>
+    <input id="season-name" placeholder="e.g. Autumn 2026" value=""
+      style="font-family:'DM Serif Display',serif;font-size:20px;font-weight:400;color:var(--green);background:transparent;border:none;border-bottom:1.5px solid var(--border);outline:none;padding:2px 4px;min-width:160px;max-width:220px;"
+      onchange="saveSeason(this.value)" title="Click to edit season name" />
+  </div>
   <div class="page-sub" id="date-range"></div>
 
   <div class="sync-bar">
@@ -211,7 +216,7 @@
 
 <script>
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-const WKS=12;
+const WKS=13;
 const LKEY='habit_tracker_nick_v3';
 const DFILE='habit_tracker_data.json';
 const TRACKER_FOLDER='1jx-Ai-8HWD4PUeopoHAS8z_D783w2F7h';
@@ -220,6 +225,7 @@ const SCOPE='https://www.googleapis.com/auth/drive.file';
 
 const DEF={
   startDate:new Date().toISOString().slice(0,10),
+  seasonName:'',
   currentWeek:1,
   goals:[
     {id:'g1',name:'Improve sleep pattern',open:false},
@@ -411,10 +417,14 @@ function editStartDate(){
   sched();render();
 }
 
+function saveSeason(v){S.seasonName=v;sched();}
+
 function render(){
   // Snap start date to Monday if not already
   const snapped=nearestMonday(S.startDate);
   if(snapped!==S.startDate){S.startDate=snapped;}
+  // Populate season name field
+  document.getElementById('season-name').value=S.seasonName||'';
   renderDateRange();renderGoals();renderTabs();renderWeekDateBar();renderRows();renderReview();renderMetrics();renderBars();
 }
 
@@ -465,9 +475,10 @@ function exportCSV(){
     });
   }
   const csv=rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
+  const seasonSlug=(S.seasonName||'habits').replace(/\s+/g,'_');
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
-  a.download='habit_tracker.csv';a.click();
+  a.download=`habits_${seasonSlug}.csv`;a.click();
 }
 
 document.getElementById('r-well').addEventListener('input',function(){
