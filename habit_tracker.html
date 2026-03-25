@@ -147,8 +147,8 @@
     <div class="card metrics-card">
       <div class="metrics-row" id="metrics-row"></div>
       <div>
-        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">12-week overview</div>
-        <div class="mini-bars" id="mini-bars"></div>
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Season overview</div>
+        <div class="mini-bars" id="mini-bars" style="grid-template-columns:repeat(13,1fr);gap:2px;"></div>
         <div style="display:flex;justify-content:space-between;margin-top:3px;">
           <span style="font-size:9px;color:var(--text3)">Wk 1</span>
           <span style="font-size:9px;color:var(--text3)">Wk 12</span>
@@ -169,10 +169,10 @@
       <thead><tr>
         <th class="hcol">Habit / goal</th>
         <th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th>
-        <th>Score</th><th></th>
+        <th>Week</th><th>Overall</th><th></th>
       </tr></thead>
       <tbody id="habit-tbody"></tbody>
-      <tfoot><tr><td colspan="10"><button class="add-btn" onclick="showAddHabit()">+ Add habit</button></td></tr></tfoot>
+      <tfoot><tr><td colspan="11"><button class="add-btn" onclick="showAddHabit()">+ Add habit</button></td></tr></tfoot>
     </table>
   </div>
 
@@ -305,12 +305,25 @@ function renderTabs(){
   }
 }
 
+function habitOverallScore(hid){
+  // Average score across all weeks that have at least one tick for any habit
+  const weeksWithData=[];
+  for(let w=1;w<=WKS;w++){
+    const done=DAYS.filter((_,di)=>isCk(w,hid,di)).length;
+    // Only include weeks up to current week
+    if(w<=S.currentWeek) weeksWithData.push(Math.round(done/7*100));
+  }
+  if(!weeksWithData.length)return null;
+  return Math.round(weeksWithData.reduce((a,b)=>a+b,0)/weeksWithData.length);
+}
+
 function renderRows(){
   const w=S.currentWeek,tb=document.getElementById('habit-tbody');
   tb.innerHTML='';
   S.habits.forEach(h=>{
     const done=DAYS.filter((_,di)=>isCk(w,h.id,di)).length;
     const pct=Math.round(done/7*100);
+    const overall=habitOverallScore(h.id);
     const goalOpts=S.goals.map(g=>`<option value="${g.id}"${g.id===h.goalId?' selected':''}>${g.name}</option>`).join('');
     const tr=document.createElement('tr');
     tr.innerHTML=`
@@ -320,6 +333,7 @@ function renderRows(){
       </td>
       ${DAYS.map((_,di)=>`<td><div class="chk${isCk(w,h.id,di)?' on':''}" onclick="toggle(${w},'${h.id}',${di})"></div></td>`).join('')}
       <td><span class="spill ${scCls(done>0?pct:null)}">${done>0?pct+'%':'—'}</span></td>
+      <td><span class="spill ${scCls(overall!==null&&overall>0?overall:null)}">${overall!==null&&overall>0?overall+'%':'—'}</span></td>
       <td><button class="del-btn" onclick="delHabit('${h.id}')" title="Remove habit">✕</button></td>`;
     tb.appendChild(tr);
   });
@@ -392,7 +406,7 @@ function fmtDate(d,includeYear){
 
 function renderDateRange(){
   const st=new Date(S.startDate);
-  const en=weekEnd(12);
+  const en=weekEnd(WKS);
   const stStr=fmtDate(st,true);
   const enStr=fmtDate(en,true);
   document.getElementById('date-range').innerHTML=
@@ -462,7 +476,7 @@ function resetAll(){
   sched();render();
 }
 function exportCSV(){
-  const rows=[['Week','Week start','Week end','Habit','Goal','Mon','Tue','Wed','Thu','Fri','Sat','Sun','Score%']];
+  const rows=[['Week','Week start','Week end','Habit','Goal','Mon','Tue','Wed','Thu','Fri','Sat','Sun','Week score%','Overall score%']];
   for(let w=1;w<=WKS;w++){
     const wst=weekStart(w);
     const wen=weekEnd(w);
@@ -471,7 +485,9 @@ function exportCSV(){
     S.habits.forEach(h=>{
       const gn=(S.goals.find(g=>g.id===h.goalId)||{}).name||'';
       const days=DAYS.map((_,di)=>isCk(w,h.id,di)?1:0);
-      rows.push([w,wstStr,wenStr,h.name,gn,...days,Math.round(days.reduce((a,b)=>a+b,0)/7*100)]);
+      const weekScore=Math.round(days.reduce((a,b)=>a+b,0)/7*100);
+      const overall=habitOverallScore(h.id);
+      rows.push([w,wstStr,wenStr,h.name,gn,...days,weekScore,overall!==null?overall:'']);
     });
   }
   const csv=rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
