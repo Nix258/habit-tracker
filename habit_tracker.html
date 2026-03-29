@@ -127,353 +127,248 @@
   <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:4px;">
     <div class="page-title">Seasonal Habit Tracker</div>
     <input id="season-name" placeholder="e.g. Autumn 2026" value=""
-      style="font-family:'DM Serif Display',serif;font-size:20px;font-weight:400;color:var(--green);background:transparent;border:none;border-bottom:1.5px solid var(--border);outline:none;padding:2px 4px;min-width:160px;max-width:220px;"
-      onchange="saveSeason(this.value)" title="Click to edit season name" />
+      style="border:none;outline:none;font-family:inherit;font-size:14px;font-weight:500;color:var(--text2);background:transparent;flex:1;min-width:140px;padding:2px 0;border-bottom:1.5px solid var(--border);"
+      onchange="S.seasonName=this.value;sched();">
   </div>
-  <div class="page-sub" id="date-range"></div>
+  <div class="page-sub">13-week habit tracker with weekly reviews</div>
 
   <div class="sync-bar">
-    <div class="sync-dot" id="sdot"></div>
-    <div class="sync-status" id="stxt"><b>Not connected to Google Drive</b> — data saves in this browser only</div>
-    <button class="btn-sm go" id="signin-btn" onclick="signIn()">Connect Google Drive</button>
-    <button class="btn-sm" id="signout-btn" onclick="signOut()" style="display:none">Disconnect</button>
+    <div class="sync-status"><span class="sync-dot" id="sdot"></span></div>
+    <div id="stxt" class="sync-status">Not connected to Google Drive</div>
+    <button id="signin-btn" class="btn-sm go" onclick="signIn()">Connect Google Drive</button>
+    <button id="signout-btn" class="btn-sm" onclick="signOut()" style="display:none;">Sign Out</button>
+    <button id="save-all-btn" class="btn-sm" onclick="manualSaveDrive()" style="display:none;">Save All to Drive</button>
   </div>
 
   <div class="top-row">
     <div class="card">
-      <div class="card-lbl">Goals &amp; habits</div>
+      <div class="card-lbl">Goals</div>
       <div id="goals-list"></div>
+      <button class="add-btn" onclick="addGoal()">+ Add Goal</button>
     </div>
     <div class="card metrics-card">
-      <div class="metrics-row" id="metrics-row"></div>
       <div>
-        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Season overview</div>
-        <div class="mini-bars" id="mini-bars" style="grid-template-columns:repeat(13,1fr);gap:2px;"></div>
-        <div style="display:flex;justify-content:space-between;margin-top:3px;">
-          <span style="font-size:9px;color:var(--text3)">Wk 1</span>
-          <span style="font-size:9px;color:var(--text3)">Wk 12</span>
+        <div class="card-lbl">Metrics</div>
+        <div class="metrics-row">
+          <div class="metric">
+            <div class="metric-val good" id="metric-weeks">0</div>
+            <div class="metric-lbl">Weeks tracked</div>
+          </div>
+          <div class="metric">
+            <div class="metric-val" id="metric-habits">0</div>
+            <div class="metric-lbl">Active habits</div>
+          </div>
+          <div class="metric">
+            <div class="metric-val good" id="metric-avg">0%</div>
+            <div class="metric-lbl">Avg. score</div>
+          </div>
         </div>
+      </div>
+      <div>
+        <div class="card-lbl">13-Week Trend</div>
+        <div class="mini-bars" id="mini-bars"></div>
       </div>
     </div>
   </div>
 
   <div class="week-nav">
-    <span class="wk-lbl">Week</span>
-    <div id="week-tabs" style="display:flex;gap:5px;flex-wrap:wrap;"></div>
+    <span class="wk-lbl">Select week:</span>
+    <div id="week-tabs"></div>
   </div>
-
-  <div id="week-date-bar" style="font-size:13px;color:var(--text2);margin-bottom:10px;padding:0 2px;"></div>
 
   <div class="tracker-wrap">
     <table>
-      <thead><tr>
-        <th class="hcol">Habit / goal</th>
-        <th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th>
-        <th>Week</th><th>Overall</th><th></th>
-      </tr></thead>
-      <tbody id="habit-tbody"></tbody>
-      <tfoot><tr><td colspan="11"><button class="add-btn" onclick="showAddHabit()">+ Add habit</button></td></tr></tfoot>
+      <thead>
+        <tr>
+          <th class="hcol">Habit</th>
+          <th>Mon</th>
+          <th>Tue</th>
+          <th>Wed</th>
+          <th>Thu</th>
+          <th>Fri</th>
+          <th>Sat</th>
+          <th>Sun</th>
+          <th>Score</th>
+        </tr>
+      </thead>
+      <tbody id="habits-table"></tbody>
+      <tfoot>
+        <tr>
+          <td colspan="9">
+            <button class="add-btn" onclick="addHabit()">+ Add Habit</button>
+          </td>
+        </tr>
+      </tfoot>
     </table>
   </div>
 
-  <div class="review-card">
-    <div class="card-lbl">Week <span id="rev-wk">1</span> review</div>
+  <div id="review-card" class="review-card" style="display:none;">
     <div class="review-top">
       <div>
-        <div class="rev-num" id="rev-num">—</div>
-        <div class="rev-lbl">weekly score</div>
+        <div class="rev-num" id="rev-num">0%</div>
+        <div class="rev-lbl">Week score</div>
       </div>
       <div class="rev-bar-wrap">
-        <div class="rev-bar-bg"><div class="rev-bar-fill" id="rev-bar" style="width:0%;background:var(--text3)"></div></div>
-        <div class="rev-target">Target: 80% &nbsp;·&nbsp; <span id="rev-verdict"></span></div>
+        <div class="rev-bar-bg"><div class="rev-bar-fill" id="rev-bar-fill"></div></div>
+        <div class="rev-target">Target: 100% across all habits</div>
       </div>
     </div>
     <div class="rev-fields">
-      <div class="rev-field"><label>What went well?</label><textarea id="r-well" placeholder="Reflect on your wins..." rows="3"></textarea></div>
-      <div class="rev-field"><label>How do I improve?</label><textarea id="r-improve" placeholder="What would I change?" rows="3"></textarea></div>
+      <div class="rev-field">
+        <label>What went well?</label>
+        <textarea id="r-well" placeholder="e.g. Consistent exercise this week, good sleep routine..."></textarea>
+      </div>
+      <div class="rev-field">
+        <label>What could improve?</label>
+        <textarea id="r-improve" placeholder="e.g. More focus needed on nutrition tracking..."></textarea>
+      </div>
     </div>
   </div>
 
   <div class="bot-row">
-    <button class="btn pri" onclick="exportCSV()">Export data as CSV</button>
-    <button class="btn" onclick="clearWeek()">Clear this week</button>
-    <button class="btn dan" onclick="resetAll()">Reset all data</button>
+    <button class="btn pri" onclick="exportCSV()">📥 Download CSV</button>
+    <button class="btn" onclick="resetSeason()">Reset Season</button>
   </div>
 </div>
 
-<div class="modal-bg" id="add-modal">
+<div class="modal-bg" id="modal-bg">
   <div class="modal">
-    <h3>Add new habit</h3>
-    <p>Enter the habit name and which goal it supports.</p>
-    <input id="new-name" placeholder="Habit name..." />
-    <select id="new-goal"></select>
+    <h3 id="modal-title"></h3>
+    <p id="modal-msg"></p>
     <div class="modal-btns">
       <button class="btn" onclick="closeModal()">Cancel</button>
-      <button class="btn pri" onclick="confirmAdd()">Add</button>
+      <button class="btn pri" onclick="confirmModal()">OK</button>
     </div>
   </div>
 </div>
 
 <script>
-const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-const WKS=13;
-const LKEY='habit_tracker_nick_v3';
-const DFILE='habit_tracker_data.json';
-const TRACKER_FOLDER='1jx-Ai-8HWD4PUeopoHAS8z_D783w2F7h';
 const CLIENT_ID='252560527754-rpr438pbj1ude16sa34cu3r3elik3oqj.apps.googleusercontent.com';
 const SCOPE='https://www.googleapis.com/auth/drive.file';
+const DFILE='habits_tracker.json';
+const TRACKER_FOLDER='1TM-3jGI3hNZO6Aj8M0PJb8k7_ySqqxah';
+const WKS=13,DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
-const DEF={
-  startDate:new Date().toISOString().slice(0,10),
-  seasonName:'',
-  currentWeek:1,
-  goals:[
-    {id:'g1',name:'Improve sleep pattern',open:false},
-    {id:'g2',name:'Get more things done',open:false},
-    {id:'g3',name:'Get weight under 82kg',open:false}
-  ],
-  habits:[
-    {id:'h1',name:'Outside exercise at 8am',goalId:'g1'},
-    {id:'h2',name:'In bed before 12:30am',goalId:'g1'},
-    {id:'h3',name:'Finish at least 1 Action',goalId:'g2'},
-    {id:'h4',name:'Exercise or activity',goalId:'g3'},
-    {id:'h5',name:'Fill in nutrition app',goalId:'g3'}
-  ],
-  checks:{},reviews:{}
-};
-
-let S=JSON.parse(JSON.stringify(DEF));
-let dfid=null, saveT=null, accessToken=null;
-
-function loadLocal(){try{const r=localStorage.getItem(LKEY);if(r)S=JSON.parse(r);}catch(e){}}
-function saveLocal(){try{localStorage.setItem(LKEY,JSON.stringify(S));}catch(e){}}
-function sched(){saveLocal();if(accessToken){setSS('busy');clearTimeout(saveT);saveT=setTimeout(saveDrive,1400);}}
-
-function ck(w,hid,di){return`w${w}_${hid}_d${di}`;}
-function isCk(w,hid,di){return!!S.checks[ck(w,hid,di)];}
-
-function toggle(w,hid,di){
-  const k=ck(w,hid,di);
-  S.checks[k]=!S.checks[k];
-  sched();
-  renderRows();renderReview();renderMetrics();renderBars();renderTabs();
-}
-
-function wkScore(w){
-  if(!S.habits.length)return null;
-  let done=0;
-  S.habits.forEach(h=>DAYS.forEach((_,di)=>{if(isCk(w,h.id,di))done++;}));
-  return Math.round(done/(S.habits.length*7)*100);
-}
-
-function scCls(p){
-  if(p===null||p===0)return'sp-n';
-  return p>=80?'sp-g':p>=50?'sp-a':'sp-r';
-}
-
-function renderGoals(){
-  const el=document.getElementById('goals-list');
-  el.innerHTML='';
-  S.goals.forEach(g=>{
-    const habs=S.habits.filter(h=>h.goalId===g.id);
-    const d=document.createElement('div');
-    d.className='goal-item';
-    d.innerHTML=`
-      <div class="goal-hdr" onclick="togGoal('${g.id}')">
-        <span class="goal-arrow${g.open?' open':''}" id="arr-${g.id}">&#9658;</span>
-        <input class="goal-name-inp" value="${g.name}" onclick="event.stopPropagation()" onchange="rnGoal('${g.id}',this.value)" />
-      </div>
-      <div class="goal-habits${g.open?' open':''}" id="gh-${g.id}">
-        ${habs.length?habs.map(h=>`<div class="ghab">${h.name}</div>`).join(''):'<div style="font-size:11px;color:var(--text3);padding:2px 0">No habits yet</div>'}
-      </div>`;
-    el.appendChild(d);
-  });
-}
-
-function togGoal(gid){const g=S.goals.find(x=>x.id===gid);if(g){g.open=!g.open;}renderGoals();}
-function rnGoal(gid,v){const g=S.goals.find(x=>x.id===gid);if(g){g.name=v;sched();renderGoals();renderRows();}}
-
-function renderTabs(){
-  const c=document.getElementById('week-tabs');c.innerHTML='';
-  for(let w=1;w<=WKS;w++){
-    const s=wkScore(w),act=w===S.currentWeek,hd=s!==null&&s>0;
-    const b=document.createElement('button');
-    b.className=`wk-tab${act?' active':''}${hd&&!act?' has':''}`;
-    b.textContent=hd&&!act?`W${w} ${s}%`:`W${w}`;
-    b.onclick=()=>{S.currentWeek=w;saveLocal();renderTabs();renderWeekDateBar();renderRows();renderReview();renderMetrics();};
-    c.appendChild(b);
-  }
-}
-
-function habitOverallScore(hid){
-  // Average score across all weeks that have at least one tick for any habit
-  const weeksWithData=[];
-  for(let w=1;w<=WKS;w++){
-    const done=DAYS.filter((_,di)=>isCk(w,hid,di)).length;
-    // Only include weeks up to current week
-    if(w<=S.currentWeek) weeksWithData.push(Math.round(done/7*100));
-  }
-  if(!weeksWithData.length)return null;
-  return Math.round(weeksWithData.reduce((a,b)=>a+b,0)/weeksWithData.length);
-}
-
-function renderRows(){
-  const w=S.currentWeek,tb=document.getElementById('habit-tbody');
-  tb.innerHTML='';
-  S.habits.forEach(h=>{
-    const done=DAYS.filter((_,di)=>isCk(w,h.id,di)).length;
-    const pct=Math.round(done/7*100);
-    const overall=habitOverallScore(h.id);
-    const goalOpts=S.goals.map(g=>`<option value="${g.id}"${g.id===h.goalId?' selected':''}>${g.name}</option>`).join('');
-    const tr=document.createElement('tr');
-    tr.innerHTML=`
-      <td class="hcell">
-        <input class="hab-inp" value="${h.name}" onchange="rnHab('${h.id}',this.value)" title="Click to rename" />
-        <select class="goal-sel" onchange="reassignHabit('${h.id}',this.value)" title="Change goal">${goalOpts}</select>
-      </td>
-      ${DAYS.map((_,di)=>`<td><div class="chk${isCk(w,h.id,di)?' on':''}" onclick="toggle(${w},'${h.id}',${di})"></div></td>`).join('')}
-      <td><span class="spill ${scCls(done>0?pct:null)}">${done>0?pct+'%':'—'}</span></td>
-      <td><span class="spill ${scCls(overall!==null&&overall>0?overall:null)}">${overall!==null&&overall>0?overall+'%':'—'}</span></td>
-      <td><button class="del-btn" onclick="delHabit('${h.id}')" title="Remove habit">✕</button></td>`;
-    tb.appendChild(tr);
-  });
-}
-
-function renderReview(){
-  const w=S.currentWeek,pct=wkScore(w);
-  document.getElementById('rev-wk').textContent=w;
-  const n=document.getElementById('rev-num'),bar=document.getElementById('rev-bar'),v=document.getElementById('rev-verdict');
-  if(!pct){n.textContent='—';n.className='rev-num n';bar.style.width='0%';v.textContent='';}
-  else{
-    n.textContent=pct+'%';
-    n.className='rev-num'+(pct>=80?'':pct>=50?' a':' r');
-    bar.style.width=pct+'%';
-    bar.style.background=pct>=80?'var(--green)':pct>=50?'var(--amber)':'var(--red)';
-    v.textContent=pct>=80?'On track — great work':'Below 80% — consider adjusting habits';
-    v.style.color=pct>=80?'var(--green)':'var(--amber)';
-  }
-  const rev=S.reviews[w]||{};
-  document.getElementById('r-well').value=rev.well||'';
-  document.getElementById('r-improve').value=rev.improve||'';
-}
-
-function renderMetrics(){
-  const sc=[];for(let w=1;w<=WKS;w++){const s=wkScore(w);if(s!==null&&s>0)sc.push(s);}
-  const tw=wkScore(S.currentWeek),best=sc.length?Math.max(...sc):null,avg=sc.length?Math.round(sc.reduce((a,b)=>a+b,0)/sc.length):null;
-  document.getElementById('metrics-row').innerHTML=[
-    ['This week',tw&&tw>0?tw+'%':'—',tw>=80],
-    ['Best week',best!==null?best+'%':'—',best>=80],
-    ['12-wk avg',avg!==null?avg+'%':'—',avg>=80]
-  ].map(([l,v,g])=>`<div class="metric"><div class="metric-val${g?' good':''}">${v}</div><div class="metric-lbl">${l}</div></div>`).join('');
-}
-
-function renderBars(){
-  const c=document.getElementById('mini-bars');c.innerHTML='';
-  const sc=[];for(let w=1;w<=WKS;w++)sc.push(wkScore(w)||0);
-  const mx=Math.max(...sc,1);
-  sc.forEach((s,i)=>{
-    const h=Math.round(s/mx*100);
-    const col=s>=80?'var(--green)':s>=50?'var(--amber)':s>0?'var(--red)':'transparent';
-    const d=document.createElement('div');d.className='mbar-wrap';d.title=`Week ${i+1}: ${s}%`;
-    d.innerHTML=`<div class="mbar-bg"><div class="mbar-fill" style="height:${h}%;background:${col}"></div></div><div class="mbar-lbl">${i+1}</div>`;
-    c.appendChild(d);
-  });
-}
-
-function nearestMonday(dateStr){
-  const d=new Date(dateStr);
-  const day=d.getDay(); // 0=Sun,1=Mon...
-  const diff=day===0?-6:1-day; // roll back to Monday
-  d.setDate(d.getDate()+diff);
-  return d.toISOString().slice(0,10);
-}
+let S={},accessToken=null,dfid=null,saveTimer=null;
+const DEF={startDate:'2026-03-02',currentWeek:1,goals:[],habits:[],checks:{},reviews:{},seasonName:''};
 
 function weekStart(w){
-  const d=new Date(S.startDate);
-  d.setDate(d.getDate()+(w-1)*7);
-  return d;
+  const start=new Date(S.startDate);
+  return new Date(start.getTime()+(w-1)*7*86400000);
 }
-
 function weekEnd(w){
-  const d=weekStart(w);
-  d.setDate(d.getDate()+6);
-  return d;
+  const start=weekStart(w);
+  return new Date(start.getTime()+6*86400000);
 }
-
-function fmtDate(d,includeYear){
-  return d.toLocaleDateString('en-AU',{day:'numeric',month:'short',...(includeYear?{year:'numeric'}:{})});
+function fmtDate(d,short){
+  if(!d)return'';
+  const fmt={year:'numeric',month:short?'2-digit':'long',day:'2-digit'};
+  return new Intl.DateTimeFormat('en-AU',fmt).format(d);
 }
-
-function renderDateRange(){
-  const st=new Date(S.startDate);
-  const en=weekEnd(WKS);
-  const stStr=fmtDate(st,true);
-  const enStr=fmtDate(en,true);
-  document.getElementById('date-range').innerHTML=
-    `${stStr} — ${enStr} &nbsp;<button onclick="editStartDate()" style="font-size:11px;color:var(--green);background:none;border:none;cursor:pointer;font-family:inherit;padding:0;">edit start date</button>`;
+function isCk(w,h,d){
+  return S.checks[`w${w}_${h}_d${d}`]===true;
 }
-
-function renderWeekDateBar(){
-  const w=S.currentWeek;
-  const st=weekStart(w);
-  const en=weekEnd(w);
-  const f=d=>d.toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'});
-  document.getElementById('week-date-bar').textContent=`Week ${w}  ·  ${f(st)} — ${f(en)}`;
+function setCheck(w,h,d,v){
+  S.checks[`w${w}_${h}_d${d}`]=v;sched();
 }
-
-function editStartDate(){
-  const current=S.startDate;
-  const input=prompt('Enter new start date (any date — it will snap to the nearest Monday):\nFormat: YYYY-MM-DD e.g. 2026-03-23',current);
-  if(!input)return;
-  const snapped=nearestMonday(input);
-  if(!snapped||isNaN(new Date(snapped).getTime())){alert('Invalid date — please use YYYY-MM-DD format.');return;}
-  S.startDate=snapped;
-  sched();render();
+function habitOverallScore(h){
+  let cnt=0,tot=0;
+  for(let w=1;w<=WKS;w++){
+    for(let d=0;d<7;d++){
+      tot++;
+      if(isCk(w,h,d))cnt++;
+    }
+  }
+  return tot>0?Math.round(cnt/tot*100):null;
 }
-
-function saveSeason(v){S.seasonName=v;sched();}
+function weekScore(w){
+  let cnt=0,tot=0;
+  S.habits.forEach(h=>{
+    for(let d=0;d<7;d++){
+      tot++;
+      if(isCk(w,h.id,d))cnt++;
+    }
+  });
+  return tot>0?Math.round(cnt/tot*100):0;
+}
 
 function render(){
-  // Snap start date to Monday if not already
-  const snapped=nearestMonday(S.startDate);
-  if(snapped!==S.startDate){S.startDate=snapped;}
-  // Populate season name field
   document.getElementById('season-name').value=S.seasonName||'';
-  renderDateRange();renderGoals();renderTabs();renderWeekDateBar();renderRows();renderReview();renderMetrics();renderBars();
+  document.getElementById('goals-list').innerHTML=S.goals.map((g,i)=>`
+    <div class="goal-item">
+      <div class="goal-hdr" onclick="this.nextElementSibling.classList.toggle('open');this.firstElementChild.classList.toggle('open');">
+        <span class="goal-arrow">${g.open?'▶':'▶'}</span>
+        <input type="text" class="goal-name-inp" value="${g.name}" onchange="S.goals[${i}].name=this.value;sched();">
+        <button class="del-btn" onclick="S.goals.splice(${i},1);sched();render();">✕</button>
+      </div>
+      <div class="goal-habits${g.open?' open':''}">
+        ${S.habits.filter(h=>h.goalId===g.id).map(h=>`<div class="ghab">${h.name}</div>`).join('')}
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('metric-weeks').textContent=S.currentWeek;
+  document.getElementById('metric-habits').textContent=S.habits.length;
+  let avgScore=0;
+  for(let w=1;w<=S.currentWeek;w++)avgScore+=weekScore(w);
+  avgScore=S.currentWeek>0?Math.round(avgScore/S.currentWeek):0;
+  document.getElementById('metric-avg').textContent=avgScore+'%';
+
+  document.getElementById('mini-bars').innerHTML=Array.from({length:WKS},(_,i)=>{
+    const w=i+1,s=weekScore(w),color=s>=80?'var(--green)':s>=60?'var(--amber)':'var(--red)';
+    const h=s===0?'2px':Math.round(s/100*30)+'px';
+    return `<div class="mbar-wrap"><div class="mbar-bg"><div class="mbar-fill" style="background:${color};height:${h};"></div></div><div class="mbar-lbl">W${w}</div></div>`;
+  }).join('');
+
+  document.getElementById('week-tabs').innerHTML=Array.from({length:WKS},(_,i)=>{
+    const w=i+1,cls=`wk-tab${w===S.currentWeek?' active':''}${weekScore(w)>0?' has':''}`;
+    return `<button class="${cls}" onclick="S.currentWeek=${w};sched();render();">W${w}</button>`;
+  }).join('');
+
+  const w=S.currentWeek;
+  document.getElementById('habits-table').innerHTML=S.habits.map((h,i)=>{
+    const goal=S.goals.find(g=>g.id===h.goalId)||{};
+    const days=DAYS.map((_,di)=>`<td><div class="chk${isCk(w,h.id,di)?' on':''}" onclick="setCheck(${w},'${h.id}',${di},!isCk(${w},'${h.id}',${di}));render();"></div></td>`).join('');
+    const score=Math.round(DAYS.reduce((a,_,di)=>a+(isCk(w,h.id,di)?1:0),0)/7*100);
+    return `<tr><td class="hcell">
+      <input type="text" class="hab-inp" value="${h.name}" onchange="S.habits[${i}].name=this.value;sched();">
+      <span class="goal-tag">${goal.name||''}</span>
+      <select class="goal-sel" onchange="S.habits[${i}].goalId=this.value;sched();render();">
+        <option value="">No goal</option>
+        ${S.goals.map(g=>`<option value="${g.id}"${h.goalId===g.id?' selected':''}>${g.name}</option>`).join('')}
+      </select>
+      <button class="del-btn" onclick="S.habits.splice(${i},1);sched();render();">✕</button>
+    </td>${days}<td><span class="spill sp-${score>=80?'g':score>=60?'a':'r'}">${score}%</span></td></tr>`;
+  }).join('');
+
+  const rev=S.reviews[w]||{};
+  const ws=weekScore(w);
+  document.getElementById('rev-num').textContent=ws+'%';
+  document.getElementById('rev-num').className='rev-num'+(ws>=80?'':ws>=60?'.a':'.r');
+  document.getElementById('rev-bar-fill').style.width=ws+'%';
+  document.getElementById('r-well').value=rev.well||'';
+  document.getElementById('r-improve').value=rev.improve||'';
+  document.getElementById('review-card').style.display='';
 }
 
-function showAddHabit(){
-  const sel=document.getElementById('new-goal');
-  sel.innerHTML=S.goals.map(g=>`<option value="${g.id}">${g.name}</option>`).join('');
-  document.getElementById('new-name').value='';
-  document.getElementById('add-modal').classList.add('open');
-  setTimeout(()=>document.getElementById('new-name').focus(),100);
-}
-function closeModal(){document.getElementById('add-modal').classList.remove('open');}
-function confirmAdd(){
-  const name=document.getElementById('new-name').value.trim();
-  const goalId=document.getElementById('new-goal').value;
-  if(!name)return;
-  S.habits.push({id:'h'+Date.now(),name,goalId});
-  sched();closeModal();render();
-}
-function rnHab(hid,v){const h=S.habits.find(x=>x.id===hid);if(h){h.name=v;sched();renderGoals();}}
-function reassignHabit(hid,gid){const h=S.habits.find(x=>x.id===hid);if(h){h.goalId=gid;sched();renderGoals();}}
-function delHabit(hid){
-  if(!confirm('Remove this habit? All its tick data will be deleted.'))return;
-  S.habits=S.habits.filter(x=>x.id!==hid);
-  Object.keys(S.checks).filter(k=>k.includes(`_${hid}_`)).forEach(k=>delete S.checks[k]);
+function addGoal(){
+  const nm=prompt('Goal name:');
+  if(!nm)return;
+  S.goals.push({id:'g'+Date.now(),name:nm,open:false});
   sched();render();
 }
-function clearWeek(){
-  if(!confirm(`Clear all ticks for week ${S.currentWeek}?`))return;
-  S.habits.forEach(h=>DAYS.forEach((_,di)=>delete S.checks[ck(S.currentWeek,h.id,di)]));
+function addHabit(){
+  if(!S.goals.length){alert('Please add at least one goal first.');return;}
+  const nm=prompt('Habit name:');
+  if(!nm)return;
+  S.habits.push({id:'h'+Date.now(),name:nm,goalId:S.goals[0].id});
   sched();render();
 }
-function resetAll(){
-  if(!confirm('Reset ALL data? This cannot be undone.'))return;
-  S=JSON.parse(JSON.stringify(DEF));S.startDate=new Date().toISOString().slice(0,10);
-  sched();render();
+function resetSeason(){
+  showModal('Reset Season','Are you sure? This will delete all data for this season.','Reset',()=>{
+    S=JSON.parse(JSON.stringify(DEF));S.startDate=new Date().toISOString().slice(0,10);
+    sched();render();
+  });
 }
 function exportCSV(){
   const rows=[['Week','Week start','Week end','Habit','Goal','Mon','Tue','Wed','Thu','Fri','Sat','Sun','Week score%','Overall score%']];
@@ -490,11 +385,53 @@ function exportCSV(){
       rows.push([w,wstStr,wenStr,h.name,gn,...days,weekScore,overall!==null?overall:'']);
     });
   }
+  
+  // Add weekly reviews section
+  rows.push(['','','','','','','','','','','','','','']);
+  rows.push(['WEEKLY REVIEWS','','','','','','','','','','','','','']);
+  rows.push(['Week','Well','Improve']);
+  for(let w=1;w<=WKS;w++){
+    const rev=S.reviews[w]||{};
+    rows.push([w,rev.well||'',rev.improve||'']);
+  }
+  
   const csv=rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
   const seasonSlug=(S.seasonName||'habits').replace(/\s+/g,'_');
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
   a.download=`habits_${seasonSlug}.csv`;a.click();
+}
+
+function showModal(title,msg,btnText,fn){
+  document.getElementById('modal-title').textContent=title;
+  document.getElementById('modal-msg').textContent=msg;
+  document.querySelector('.modal-btns .btn.pri').textContent=btnText;
+  window.modalFn=fn;
+  document.getElementById('modal-bg').classList.add('open');
+}
+function closeModal(){
+  document.getElementById('modal-bg').classList.remove('open');
+  window.modalFn=null;
+}
+function confirmModal(){
+  if(window.modalFn)window.modalFn();
+  closeModal();
+}
+
+function sched(){
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(()=>{
+    saveDrive();
+    saveLocal();
+  },500);
+}
+function saveLocal(){
+  localStorage.setItem('ht_data',JSON.stringify(S));
+}
+function loadLocal(){
+  const saved=localStorage.getItem('ht_data');
+  S=saved?JSON.parse(saved):JSON.parse(JSON.stringify(DEF));
+  if(!S.seasonName)S.seasonName='2026_1Autumn';
 }
 
 document.getElementById('r-well').addEventListener('input',function(){
@@ -513,11 +450,11 @@ let gapiLoaded=false;
 
 function setSS(state,msg){
   const dot=document.getElementById('sdot'),txt=document.getElementById('stxt');
-  const si=document.getElementById('signin-btn'),so=document.getElementById('signout-btn');
-  if(state==='ok'){dot.className='sync-dot ok';txt.innerHTML=`<b>Connected to Google Drive</b> — ${msg||'syncing automatically'}`;si.style.display='none';so.style.display='';}
+  const si=document.getElementById('signin-btn'),so=document.getElementById('signout-btn'),sb=document.getElementById('save-all-btn');
+  if(state==='ok'){dot.className='sync-dot ok';txt.innerHTML=`<b>Connected to Google Drive</b> — ${msg||'syncing automatically'}`;si.style.display='none';so.style.display='';sb.style.display='';}
   else if(state==='busy'){dot.className='sync-dot busy';txt.innerHTML=`<b>Saving to Google Drive...</b>`;}
-  else if(state==='returning'){dot.className='sync-dot';txt.innerHTML=`<b>Google Drive</b> — click to reconnect`;si.textContent='Reconnect';si.style.display='';so.style.display='none';}
-  else{dot.className='sync-dot';txt.innerHTML=`<b>Not connected to Google Drive</b> — data saves in this browser only`;si.textContent='Connect Google Drive';si.style.display='';so.style.display='none';}
+  else if(state==='returning'){dot.className='sync-dot';txt.innerHTML=`<b>Google Drive</b> — click to reconnect`;si.textContent='Reconnect';si.style.display='';so.style.display='none';sb.style.display='none';}
+  else{dot.className='sync-dot';txt.innerHTML=`<b>Not connected to Google Drive</b> — data saves in this browser only`;si.textContent='Connect Google Drive';si.style.display='';so.style.display='none';sb.style.display='none';}
 }
 
 function onGisLoad(){
@@ -614,6 +551,26 @@ async function saveDrive(){
   }catch(e){
     console.warn('Drive save:',e);
     setSS('ok','save failed — check connection');
+  }
+}
+
+async function manualSaveDrive(){
+  if(!accessToken){alert('Not connected to Google Drive. Please connect first.');return;}
+  const saveBtn=document.getElementById('save-all-btn');
+  saveBtn.disabled=true;
+  saveBtn.textContent='Saving...';
+  try{
+    await saveDrive();
+    saveBtn.textContent='Saved!';
+    setTimeout(()=>{
+      saveBtn.textContent='Save All to Drive';
+      saveBtn.disabled=false;
+    },2000);
+  }catch(e){
+    console.error('Manual save failed:',e);
+    alert('Save failed. Please check your connection and try again.');
+    saveBtn.textContent='Save All to Drive';
+    saveBtn.disabled=false;
   }
 }
 
