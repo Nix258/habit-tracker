@@ -155,10 +155,6 @@
       <div>
         <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Season overview</div>
         <div class="mini-bars" id="mini-bars" style="grid-template-columns:repeat(13,1fr);gap:2px;"></div>
-        <div style="display:flex;justify-content:space-between;margin-top:3px;">
-          <span style="font-size:9px;color:var(--text3)">Wk 1</span>
-          <span style="font-size:9px;color:var(--text3)">Wk 12</span>
-        </div>
       </div>
     </div>
   </div>
@@ -409,7 +405,7 @@ function renderBars(){
     const h=Math.round(s/mx*100);
     const col=s>=80?'var(--green)':s>=50?'var(--amber)':s>0?'var(--red)':'transparent';
     const d=document.createElement('div');d.className='mbar-wrap';d.title=`Week ${i+1}: ${s}%`;
-    d.innerHTML=`<div class="mbar-bg"><div class="mbar-fill" style="height:${h}%;background:${col}"></div></div>`;
+    d.innerHTML=`<div class="mbar-bg"><div class="mbar-fill" style="height:${h}%;background:${col}"></div></div><div class="mbar-lbl">${i+1}</div>`;
     c.appendChild(d);
   });
 }
@@ -533,6 +529,15 @@ function exportCSV(){
     const rev=S.reviews[w]||{};
     rows.push([w,rev.well||'',rev.improve||'']);
   }
+  
+  // Add goal summary section
+  rows.push(['','','','','','','','','','','','','','']);
+  rows.push(['GOAL SUMMARY','','','','','','','','','','','','','']);
+  rows.push(['Goal','Overall Score %']);
+  S.goals.forEach(g=>{
+    const score=goalOverallScore(g.id);
+    rows.push([g.name,score!==null?score+'%':'']);
+  });
   
   const csv=rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
   const seasonSlug=(S.seasonName||'habits').replace(/\s+/g,'_');
