@@ -50,8 +50,12 @@
   .metric { text-align: center; }
   .metric-val { font-size: 26px; font-weight: 300; color: var(--text); line-height: 1; }
   .metric-val.good { color: var(--green); }
+  .metric-val.bold { font-weight: 500; }
   .metric-lbl { font-size: 10px; color: var(--text3); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.05em; }
-  .mini-bars { display: grid; grid-template-columns: repeat(12,1fr); gap: 3px; height: 36px; align-items: end; }
+  .unsaved-indicator { font-size: 11px; color: var(--amber); margin-left: 8px; display: none; }
+  .unsaved-indicator.show { display: inline; }
+  .goal-score { font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 10px; display: inline-block; margin-left: 8px; white-space: nowrap; }
+  .mini-bars { display: grid; grid-template-columns: repeat(12,1fr); gap: 3px; height: 52px; align-items: end; }
   .mbar-wrap { display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; }
   .mbar-bg { width: 100%; background: var(--surface2); border: 0.5px solid var(--border); border-radius: 2px 2px 0 0; height: 100%; display: flex; align-items: flex-end; }
   .mbar-fill { width: 100%; border-radius: 2px 2px 0 0; transition: height 0.35s ease; }
@@ -135,6 +139,7 @@
   <div class="sync-bar">
     <div class="sync-dot" id="sdot"></div>
     <div class="sync-status" id="stxt"><b>Not connected to Google Drive</b> — data saves in this browser only</div>
+    <span class="unsaved-indicator" id="unsaved-ind">Unsaved changes</span>
     <button class="btn-sm go" id="signin-btn" onclick="signIn()">Connect Google Drive</button>
     <button class="btn-sm" id="signout-btn" onclick="signOut()" style="display:none">Disconnect</button>
     <button class="btn-sm" id="save-all-btn" onclick="manualSaveDrive()" style="display:none">Save All to Drive</button>
@@ -244,11 +249,28 @@ const DEF={
 };
 
 let S=JSON.parse(JSON.stringify(DEF));
-let dfid=null, saveT=null, accessToken=null;
+let dfid=null, saveT=null, accessToken=null, hasUnsavedChanges=false;
 
 function loadLocal(){try{const r=localStorage.getItem(LKEY);if(r)S=JSON.parse(r);}catch(e){}}
 function saveLocal(){try{localStorage.setItem(LKEY,JSON.stringify(S));}catch(e){}}
-function sched(){saveLocal();if(accessToken){setSS('busy');clearTimeout(saveT);saveT=setTimeout(saveDrive,1400);}}
+function sched(){
+  saveLocal();
+  if(accessToken){
+    hasUnsavedChanges=true;
+    showUnsavedIndicator();
+  }
+}
+
+function showUnsavedIndicator(){
+  const ind=document.getElementById('unsaved-ind');
+  if(ind&&accessToken)ind.classList.add('show');
+}
+
+function hideUnsavedIndicator(){
+  const ind=document.getElementById('unsaved-ind');
+  if(ind)ind.classList.remove('show');
+  hasUnsavedChanges=false;
+}
 
 function ck(w,hid,di){return`w${w}_${hid}_d${di}`;}
 function isCk(w,hid,di){return!!S.checks[ck(w,hid,di)];}
@@ -272,17 +294,28 @@ function scCls(p){
   return p>=80?'sp-g':p>=50?'sp-a':'sp-r';
 }
 
+function goalOverallScore(goalId){
+  const habs=S.habits.filter(h=>h.goalId===goalId);
+  if(!habs.length)return null;
+  const scores=habs.map(h=>habitOverallScore(h.id)).filter(s=>s!==null);
+  if(!scores.length)return null;
+  return Math.round(scores.reduce((a,b)=>a+b,0)/scores.length);
+}
+
 function renderGoals(){
   const el=document.getElementById('goals-list');
   el.innerHTML='';
   S.goals.forEach(g=>{
     const habs=S.habits.filter(h=>h.goalId===g.id);
+    const goalScore=goalOverallScore(g.id);
+    const scoreHtml=goalScore!==null?`<span class="goal-score ${scCls(goalScore)}">${goalScore}%</span>`:'';
     const d=document.createElement('div');
     d.className='goal-item';
     d.innerHTML=`
       <div class="goal-hdr" onclick="togGoal('${g.id}')">
         <span class="goal-arrow${g.open?' open':''}" id="arr-${g.id}">&#9658;</span>
         <input class="goal-name-inp" value="${g.name}" onclick="event.stopPropagation()" onchange="rnGoal('${g.id}',this.value)" />
+        ${scoreHtml}
       </div>
       <div class="goal-habits${g.open?' open':''}" id="gh-${g.id}">
         ${habs.length?habs.map(h=>`<div class="ghab">${h.name}</div>`).join(''):'<div style="font-size:11px;color:var(--text3);padding:2px 0">No habits yet</div>'}
@@ -362,10 +395,10 @@ function renderMetrics(){
   const sc=[];for(let w=1;w<=WKS;w++){const s=wkScore(w);if(s!==null&&s>0)sc.push(s);}
   const tw=wkScore(S.currentWeek),best=sc.length?Math.max(...sc):null,avg=sc.length?Math.round(sc.reduce((a,b)=>a+b,0)/sc.length):null;
   document.getElementById('metrics-row').innerHTML=[
-    ['This week',tw&&tw>0?tw+'%':'—',tw>=80],
-    ['Best week',best!==null?best+'%':'—',best>=80],
-    ['12-wk avg',avg!==null?avg+'%':'—',avg>=80]
-  ].map(([l,v,g])=>`<div class="metric"><div class="metric-val${g?' good':''}">${v}</div><div class="metric-lbl">${l}</div></div>`).join('');
+    ['Overall',avg!==null?avg+'%':'—',avg>=80,false],
+    ['This week',tw&&tw>0?tw+'%':'—',tw>=80,true],
+    ['Best week',best!==null?best+'%':'—',best>=80,false]
+  ].map(([l,v,g,bold])=>`<div class="metric"><div class="metric-val${g?' good':''}${bold?' bold':''}">${v}</div><div class="metric-lbl">${l}</div></div>`).join('');
 }
 
 function renderBars(){
@@ -376,7 +409,7 @@ function renderBars(){
     const h=Math.round(s/mx*100);
     const col=s>=80?'var(--green)':s>=50?'var(--amber)':s>0?'var(--red)':'transparent';
     const d=document.createElement('div');d.className='mbar-wrap';d.title=`Week ${i+1}: ${s}%`;
-    d.innerHTML=`<div class="mbar-bg"><div class="mbar-fill" style="height:${h}%;background:${col}"></div></div><div class="mbar-lbl">${i+1}</div>`;
+    d.innerHTML=`<div class="mbar-bg"><div class="mbar-fill" style="height:${h}%;background:${col}"></div></div>`;
     c.appendChild(d);
   });
 }
@@ -525,7 +558,7 @@ let gapiLoaded=false;
 function setSS(state,msg){
   const dot=document.getElementById('sdot'),txt=document.getElementById('stxt');
   const si=document.getElementById('signin-btn'),so=document.getElementById('signout-btn'),sb=document.getElementById('save-all-btn');
-  if(state==='ok'){dot.className='sync-dot ok';txt.innerHTML=`<b>Connected to Google Drive</b> — ${msg||'syncing automatically'}`;si.style.display='none';so.style.display='';sb.style.display='';}
+  if(state==='ok'){dot.className='sync-dot ok';txt.innerHTML=`<b>Connected to Google Drive</b> — ${msg||'ready to save'}`;si.style.display='none';so.style.display='';sb.style.display='';}
   else if(state==='busy'){dot.className='sync-dot busy';txt.innerHTML=`<b>Saving to Google Drive...</b>`;}
   else if(state==='returning'){dot.className='sync-dot';txt.innerHTML=`<b>Google Drive</b> — click to reconnect`;si.textContent='Reconnect';si.style.display='';so.style.display='none';sb.style.display='none';}
   else{dot.className='sync-dot';txt.innerHTML=`<b>Not connected to Google Drive</b> — data saves in this browser only`;si.textContent='Connect Google Drive';si.style.display='';so.style.display='none';sb.style.display='none';}
@@ -590,7 +623,7 @@ async function loadDrive(){
   try{
     const fid=await findFile();
     if(!fid){
-      setSS('ok','no existing data found — will save on next tick');
+      setSS('ok','no existing data found — use Save All to create');
       return;
     }
     dfid=fid;
@@ -635,6 +668,7 @@ async function manualSaveDrive(){
   saveBtn.textContent='Saving...';
   try{
     await saveDrive();
+    hideUnsavedIndicator();
     saveBtn.textContent='Saved!';
     setTimeout(()=>{
       saveBtn.textContent='Save All to Drive';
