@@ -229,6 +229,7 @@ const DEF={
   startDate:new Date().toISOString().slice(0,10),
   seasonName:'',
   currentWeek:1,
+  lastModified:new Date().toISOString(),
   goals:[
     {id:'g1',name:'Improve sleep pattern',open:false},
     {id:'g2',name:'Get more things done',open:false},
@@ -250,6 +251,7 @@ let dfid=null, saveT=null, accessToken=null, hasUnsavedChanges=false;
 function loadLocal(){try{const r=localStorage.getItem(LKEY);if(r)S=JSON.parse(r);}catch(e){}}
 function saveLocal(){try{localStorage.setItem(LKEY,JSON.stringify(S));}catch(e){}}
 function sched(){
+  S.lastModified=new Date().toISOString();
   saveLocal();
   if(accessToken){
     hasUnsavedChanges=true;
@@ -634,10 +636,86 @@ async function loadDrive(){
     dfid=fid;
     const r=await driveRequest('GET',`https://www.googleapis.com/drive/v3/files/${fid}?alt=media`);
     const text=await r.text();
-    S=JSON.parse(text);
-    saveLocal();
-    render();
-    setSS('ok','loaded from Drive');
+    const driveData=JSON.parse(text);
+    
+    // Get local data
+    const localData=S;
+    
+    // Compare timestamps and data
+    const driveTime=driveData.lastModified?new Date(driveData.lastModified):new Date(0);
+    const localTime=localData.lastModified?new Date(localData.lastModified):new Date(0);
+    const driveHabits=driveData.habits?driveData.habits.length:0;
+    const localHabits=localData.habits?localData.habits.length:0;
+    const driveChecks=driveData.checks?Object.keys(driveData.checks).length:0;
+    const localChecks=localData.checks?Object.keys(localData.checks).length:0;
+    
+    // Format timestamps for display
+    const formatTime=(d)=>{
+      if(d.getTime()===0)return'unknown';
+      const opts={year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',hour12:true};
+      return d.toLocaleString('en-AU',opts);
+    };
+    
+    // If local has no timestamp (old version), always ask
+    // If Drive is newer OR Drive has more data, offer choice
+    // If local is newer AND has more/equal data, keep local but warn
+    
+    const localIsNewer=localTime>driveTime;
+    const localHasMore=(localHabits>driveHabits)||(localHabits===driveHabits&&localChecks>=driveChecks);
+    
+    if(!localData.lastModified||localTime.getTime()===0){
+      // Old local data without timestamp - show comparison and ask
+      const msg=`Data found on Google Drive:\n\n`+
+        `Google Drive: ${driveHabits} habits, ${driveChecks} checks\n`+
+        `Last saved: ${formatTime(driveTime)}\n\n`+
+        `Your local data: ${localHabits} habits, ${localChecks} checks\n`+
+        `Last modified: ${formatTime(localTime)}\n\n`+
+        `Load data from Google Drive?`;
+      if(confirm(msg)){
+        S=driveData;
+        saveLocal();
+        render();
+        setSS('ok','loaded from Drive');
+      }else{
+        setSS('ok','kept local data — use Save All to update Drive');
+      }
+    }else if(localIsNewer&&localHasMore){
+      // Local is newer and has more/equal data - keep local but warn
+      const msg=`Data Comparison:\n\n`+
+        `Google Drive: ${driveHabits} habits, ${driveChecks} checks\n`+
+        `Last saved: ${formatTime(driveTime)}\n\n`+
+        `Your Local Data: ${localHabits} habits, ${localChecks} checks\n`+
+        `Last modified: ${formatTime(localTime)}\n\n`+
+        `Your local data is NEWER and has MORE content.\n\n`+
+        `Keep your local data?\n`+
+        `(Click OK to keep local, Cancel to load from Drive)`;
+      if(confirm(msg)){
+        setSS('ok','kept local data — remember to Save All to update Drive');
+      }else{
+        S=driveData;
+        saveLocal();
+        render();
+        setSS('ok','loaded from Drive');
+      }
+    }else{
+      // Drive is newer or has more data - offer choice
+      const msg=`Data Comparison:\n\n`+
+        `Google Drive: ${driveHabits} habits, ${driveChecks} checks\n`+
+        `Last saved: ${formatTime(driveTime)}\n\n`+
+        `Your Local Data: ${localHabits} habits, ${localChecks} checks\n`+
+        `Last modified: ${formatTime(localTime)}\n\n`+
+        `${!localIsNewer?'Drive data is NEWER.\n\n':'Drive has MORE content.\n\n'}`+
+        `Load data from Google Drive?\n`+
+        `(Click OK to load from Drive, Cancel to keep local)`;
+      if(confirm(msg)){
+        S=driveData;
+        saveLocal();
+        render();
+        setSS('ok','loaded from Drive');
+      }else{
+        setSS('ok','kept local data — use Save All to update Drive');
+      }
+    }
   }catch(e){
     console.warn('Drive load:',e);
     setSS('ok','load failed — using local data');
@@ -649,6 +727,11 @@ async function saveDrive(){
   try{
     setSS('busy');
     const body=JSON.stringify(S);
+    console.log('=== SAVING TO DRIVE ===');
+    console.log('Habits:',S.habits.length);
+    console.log('Checks:',Object.keys(S.checks).length);
+    console.log('Last Modified:',S.lastModified);
+    console.log('JSON size:',body.length,'bytes');
     if(!dfid){
       const fm=new FormData();
       fm.append('metadata',new Blob([JSON.stringify({name:DFILE,parents:[TRACKER_FOLDER]})],{type:'application/json'}));
@@ -656,9 +739,12 @@ async function saveDrive(){
       const r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{Authorization:'Bearer '+accessToken},body:fm});
       const d=await r.json();
       dfid=d.id;
+      console.log('Created new file, ID:',dfid);
     }else{
       await driveRequest('PATCH',`https://www.googleapis.com/upload/drive/v3/files/${dfid}?uploadType=media`,body,true);
+      console.log('Updated existing file, ID:',dfid);
     }
+    console.log('=== SAVE COMPLETE ===');
     setSS('ok','saved just now');
   }catch(e){
     console.warn('Drive save:',e);
