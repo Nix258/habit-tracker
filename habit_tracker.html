@@ -760,11 +760,28 @@ async function manualSaveDrive(){
   try{
     await saveDrive();
     hideUnsavedIndicator();
+    
+    // Format timestamp for display
+    const formatTime=(isoStr)=>{
+      const d=new Date(isoStr);
+      const opts={year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',hour12:true};
+      return d.toLocaleString('en-AU',opts);
+    };
+    
+    // Create detailed confirmation message
+    const habitCount=S.habits.length;
+    const checkCount=Object.keys(S.checks).length;
+    const timeStr=S.lastModified?formatTime(S.lastModified):'just now';
+    
+    const confirmMsg=`✓ Saved successfully!\n\n${habitCount} habits, ${checkCount} checks\nLast saved: ${timeStr}`;
+    
     saveBtn.textContent='Saved!';
+    alert(confirmMsg);
+    
     setTimeout(()=>{
       saveBtn.textContent='Save All to Drive';
       saveBtn.disabled=false;
-    },2000);
+    },1000);
   }catch(e){
     console.error('Manual save failed:',e);
     alert('Save failed. Please check your connection and try again.');
