@@ -561,6 +561,7 @@ document.getElementById('r-improve').addEventListener('input',function(){
 let tokenClient=null;
 let gisLoaded=false;
 let gapiLoaded=false;
+let tokenIssuedAt=0;
 
 function setSS(state,msg){
   const dot=document.getElementById('sdot'),txt=document.getElementById('stxt');
@@ -579,6 +580,7 @@ function onGisLoad(){
     callback:(resp)=>{
       if(resp.error){console.warn('Auth error:',resp);return;}
       accessToken=resp.access_token;
+      tokenIssuedAt=Date.now();
       localStorage.setItem('ht_autoconnect','1');
       setSS('busy','connecting...');
       loadDrive();
@@ -722,8 +724,29 @@ async function loadDrive(){
   }
 }
 
+async function ensureFreshToken(){
+  // If token is older than 50 minutes (Google tokens expire at ~60 min), refresh it silently in the background
+  const tokenAgeMin=(Date.now()-tokenIssuedAt)/60000;
+  if(!accessToken||tokenAgeMin>50){
+    return new Promise((resolve,reject)=>{
+      if(!tokenClient){reject(new Error('Token client not ready'));return;}
+      // Temporarily swap the callback to capture the new token
+      const originalCallback=tokenClient.callback;
+      tokenClient.callback=(resp)=>{
+        tokenClient.callback=originalCallback;
+        if(resp.error){reject(new Error('Token refresh failed: '+resp.error));return;}
+        accessToken=resp.access_token;
+        tokenIssuedAt=Date.now();
+        resolve();
+      };
+      tokenClient.requestAccessToken({prompt:''});
+    });
+  }
+}
+
 async function saveDrive(){
-  if(!accessToken)return;
+  if(!accessToken)throw new Error('Not connected to Google Drive');
+  await ensureFreshToken();
   try{
     setSS('busy');
     const body=JSON.stringify(S);
@@ -737,18 +760,21 @@ async function saveDrive(){
       fm.append('metadata',new Blob([JSON.stringify({name:DFILE,parents:[TRACKER_FOLDER]})],{type:'application/json'}));
       fm.append('file',new Blob([body],{type:'application/json'}));
       const r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{Authorization:'Bearer '+accessToken},body:fm});
+      if(!r.ok)throw new Error('Drive create failed: HTTP '+r.status+' '+r.statusText);
       const d=await r.json();
       dfid=d.id;
       console.log('Created new file, ID:',dfid);
     }else{
-      await driveRequest('PATCH',`https://www.googleapis.com/upload/drive/v3/files/${dfid}?uploadType=media`,body,true);
+      const r=await driveRequest('PATCH',`https://www.googleapis.com/upload/drive/v3/files/${dfid}?uploadType=media`,body,true);
+      if(!r.ok)throw new Error('Drive save failed: HTTP '+r.status+' '+r.statusText);
       console.log('Updated existing file, ID:',dfid);
     }
     console.log('=== SAVE COMPLETE ===');
     setSS('ok','saved just now');
   }catch(e){
-    console.warn('Drive save:',e);
+    console.error('Drive save failed:',e);
     setSS('ok','save failed — check connection');
+    throw e;
   }
 }
 
@@ -784,7 +810,7 @@ async function manualSaveDrive(){
     },1000);
   }catch(e){
     console.error('Manual save failed:',e);
-    alert('Save failed. Please check your connection and try again.');
+    alert('✗ Save FAILED!\n\nReason: '+e.message+'\n\nYour ticks are saved in this browser only.\nTry clicking Save All to Drive again, or click Reconnect at the top if the problem continues.');
     saveBtn.textContent='Save All to Drive';
     saveBtn.disabled=false;
   }
