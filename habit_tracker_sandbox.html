@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>12-Week Habit Tracker</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --green: #1d9e75; --green-dark: #0f6e56; --green-light: #e1f5ee;
+    --amber: #a64d79; --amber-light: #f8e1ee;
+    --red: #8e7cc3; --red-light: #eee8f7;
+    --bg: #f5f3ef; --surface: #ffffff; --surface2: #f8f7f4;
+    --border: #e0ddd6; --border2: #ccc9c0;
+    --text: #1e1d1b; --text2: #6b6860; --text3: #a8a69f;
+    --radius: 12px; --radius-sm: 8px;
+  }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 16px; }
+  .app { max-width: 1000px; margin: 0 auto; padding: 2rem 1.5rem 3rem; }
+  .page-title { font-family: 'DM Serif Display', serif; font-size: 28px; font-weight: 400; color: var(--text); letter-spacing: -0.3px; }
+  .page-sub { font-size: 12px; color: var(--text3); margin-top: 3px; margin-bottom: 1.5rem; }
+  .sync-bar { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 8px 14px; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .sync-status { font-size: 12px; color: var(--text2); flex: 1; min-width: 160px; }
+  .sync-status b { font-weight: 500; }
+  .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text3); flex-shrink: 0; }
+  .sync-dot.ok { background: var(--green); }
+  .sync-dot.busy { background: var(--amber); animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.3} }
+  .btn-sm { padding: 5px 12px; border-radius: 6px; border: 0.5px solid var(--border2); background: var(--surface); font-family: inherit; font-size: 12px; color: var(--text2); cursor: pointer; transition: background 0.15s; white-space: nowrap; }
+  .btn-sm:hover { background: var(--surface2); }
+  .btn-sm.go { background: var(--green); border-color: var(--green); color: #fff; }
+  .btn-sm.go:hover { background: var(--green-dark); }
+  .top-row { display: grid; grid-template-columns: 290px 1fr; gap: 14px; margin-bottom: 1.5rem; }
+  @media(max-width:660px){ .top-row { grid-template-columns: 1fr; } }
+  .card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 1.1rem 1.25rem; }
+  .card-lbl { font-size: 10px; font-weight: 600; letter-spacing: 0.07em; color: var(--text3); text-transform: uppercase; margin-bottom: 10px; }
+  .goal-item { margin-bottom: 4px; }
+  .goal-hdr { display: flex; align-items: center; gap: 6px; cursor: pointer; padding: 4px 0; }
+  .goal-arrow { font-size: 9px; color: var(--text3); transition: transform 0.18s; flex-shrink: 0; user-select: none; line-height: 1; }
+  .goal-arrow.open { transform: rotate(90deg); }
+  .goal-name-inp { border: none; outline: none; font-family: inherit; font-size: 13px; font-weight: 500; color: var(--text); background: transparent; flex: 1; }
+  .goal-name-inp:focus { color: var(--green); }
+  .goal-habits { padding: 2px 0 2px 16px; display: none; }
+  .goal-habits.open { display: block; }
+  .ghab { font-size: 11px; color: var(--text2); padding: 2px 0; display: flex; align-items: center; gap: 5px; }
+  .ghab::before { content:''; width:4px; height:4px; border-radius:50%; background:var(--green); flex-shrink:0; }
+  .metrics-card { display: flex; flex-direction: column; justify-content: space-between; }
+  .metrics-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 14px; }
+  .metric { text-align: center; }
+  .metric-val { font-size: 26px; font-weight: 300; color: var(--text); line-height: 1; }
+  .metric-val.good { color: var(--green); }
+  .metric-val.bold { font-weight: 500; }
+  .metric-lbl { font-size: 10px; color: var(--text3); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .unsaved-indicator { font-size: 11px; color: var(--amber); margin-left: 8px; display: none; }
+  .unsaved-indicator.show { display: inline; }
+  .goal-score { font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 10px; display: inline-block; margin-left: 8px; white-space: nowrap; }
+  .mini-bars { display: grid; grid-template-columns: repeat(12,1fr); gap: 3px; height: 52px; align-items: end; }
+  .mbar-wrap { display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; }
+  .mbar-bg { width: 100%; background: var(--surface2); border: 0.5px solid var(--border); border-radius: 2px 2px 0 0; height: 100%; display: flex; align-items: flex-end; }
+  .mbar-fill { width: 100%; border-radius: 2px 2px 0 0; transition: height 0.35s ease; }
+  .mbar-lbl { font-size: 8px; color: var(--text3); margin-top: 2px; }
+  .week-nav { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 1rem; }
+  .wk-lbl { font-size: 11px; color: var(--text3); font-weight: 500; margin-right: 2px; }
+  .wk-tab { padding: 4px 10px; border-radius: 20px; border: 0.5px solid var(--border); background: var(--surface); font-family: inherit; font-size: 11px; cursor: pointer; color: var(--text2); transition: all 0.12s; }
+  .wk-tab:hover { background: var(--green-light); border-color: var(--green); color: var(--green-dark); }
+  .wk-tab.active { background: var(--green); border-color: var(--green); color: #fff; font-weight: 500; }
+  .wk-tab.has { border-color: var(--green); color: var(--green-dark); }
+  .tracker-wrap { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 1rem; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; min-width: 560px; }
+  thead th { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; background: var(--surface2); padding: 8px 6px; text-align: center; border-bottom: 0.5px solid var(--border); }
+  thead th.hcol { text-align: left; padding-left: 14px; min-width: 170px; }
+  tbody td { padding: 6px; text-align: center; border-bottom: 0.5px solid #f5f3ef; vertical-align: middle; }
+  tbody td.hcell { text-align: left; padding-left: 14px; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: #fafaf8; }
+  .hab-inp { border: none; outline: none; font-family: inherit; font-size: 13px; color: var(--text); background: transparent; width: 100%; }
+  .hab-inp:focus { color: var(--green); }
+  .goal-tag { font-size: 9px; color: var(--text3); display: block; margin-top: 1px; }
+  .del-btn { font-size: 11px; color: var(--border2); background: none; border: none; cursor: pointer; padding: 0 4px; transition: color 0.15s; }
+  .del-btn:hover { color: var(--red); }
+  .move-btn { font-size: 11px; color: var(--border2); background: none; border: none; cursor: pointer; padding: 0 2px; transition: color 0.15s; line-height: 1; }
+  .move-btn:hover { color: var(--green); }
+  .goal-sel { border: none; outline: none; font-family: inherit; font-size: 9px; color: var(--text3); background: transparent; cursor: pointer; max-width: 130px; padding: 0; margin-top: 1px; }
+  .goal-sel:hover { color: var(--green); }
+  .chk { width: 22px; height: 22px; border-radius: 5px; border: 1.5px solid var(--border2); background: var(--surface); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.12s; flex-shrink: 0; }
+  .chk:hover { border-color: var(--green); background: var(--green-light); }
+  .chk.on { background: var(--green); border-color: var(--green); }
+  .chk.on::after { content:''; display:block; width:5px; height:9px; border:2px solid #fff; border-top:none; border-left:none; transform:rotate(45deg) translate(-1px,-1px); }
+  .spill { font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 10px; display: inline-block; white-space: nowrap; }
+  .sp-g { background: var(--green-light); color: var(--green-dark); }
+  .sp-a { background: var(--amber-light); color: var(--amber); }
+  .sp-r { background: var(--red-light); color: var(--red); }
+  .sp-n { background: var(--surface2); color: var(--text3); }
+  tfoot td { padding: 8px 14px; }
+  .add-btn { font-size: 12px; color: var(--green); cursor: pointer; background: none; border: none; font-family: inherit; display: inline-flex; align-items: center; gap: 5px; }
+  .add-btn:hover { color: var(--green-dark); }
+  .review-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1rem; }
+  .review-top { display: flex; align-items: flex-start; gap: 1.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+  .rev-num { font-family: 'DM Serif Display', serif; font-size: 52px; line-height: 1; color: var(--green); }
+  .rev-num.a { color: var(--amber); }
+  .rev-num.r { color: var(--red); }
+  .rev-num.n { color: var(--text3); }
+  .rev-lbl { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .rev-bar-wrap { flex: 1; min-width: 100px; padding-top: 10px; }
+  .rev-bar-bg { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; border: 0.5px solid var(--border); margin-bottom: 4px; }
+  .rev-bar-fill { height: 100%; border-radius: 3px; transition: width 0.35s ease; }
+  .rev-target { font-size: 10px; color: var(--text3); }
+  .rev-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media(max-width:480px){ .rev-fields { grid-template-columns: 1fr; } }
+  .rev-field label { font-size: 10px; font-weight: 600; letter-spacing: 0.06em; color: var(--text3); text-transform: uppercase; display: block; margin-bottom: 5px; }
+  .rev-field textarea { width: 100%; border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 7px 9px; font-family: inherit; font-size: 12px; color: var(--text); resize: none; min-height: 58px; outline: none; background: var(--surface2); line-height: 1.5; }
+  .rev-field textarea:focus { border-color: var(--green); background: #fff; }
+  .bot-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn { padding: 8px 16px; border-radius: var(--radius-sm); border: 0.5px solid var(--border2); background: var(--surface); font-family: inherit; font-size: 12px; color: var(--text2); cursor: pointer; transition: background 0.15s; }
+  .btn:hover { background: var(--surface2); }
+  .btn.pri { background: var(--green); border-color: var(--green); color: #fff; font-weight: 500; }
+  .btn.pri:hover { background: var(--green-dark); }
+  .btn.dan { color: #c0392b; border-color: #f5c4b3; }
+  .btn.dan:hover { background: #fdf0ed; }
+  .btn.season { background: #5b6abf; border-color: #5b6abf; color: #fff; font-weight: 500; }
+  .btn.season:hover { background: #4a57a0; }
+  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 100; align-items: center; justify-content: center; }
+  .modal-bg.open { display: flex; }
+  .modal { background: var(--surface); border-radius: var(--radius); padding: 1.5rem; max-width: 400px; width: 92%; }
+  .modal h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+  .modal p { font-size: 12px; color: var(--text2); line-height: 1.6; margin-bottom: 12px; }
+  .modal input, .modal select { width: 100%; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); padding: 8px 10px; font-family: inherit; font-size: 13px; color: var(--text); outline: none; margin-bottom: 10px; background: var(--surface); }
+  .modal input:focus, .modal select:focus { border-color: var(--green); }
+  .modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
+
+  /* Weekly Habits panel */
+  .weekly-panel { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1rem; }
+  .weekly-grid { display: grid; grid-template-columns: 1fr auto auto; gap: 0; }
+  .wh-header { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; padding: 6px 8px; background: var(--surface2); border-bottom: 0.5px solid var(--border); }
+  .wh-cell { padding: 7px 8px; border-bottom: 0.5px solid #f5f3ef; display: flex; align-items: center; }
+  .wh-cell-center { justify-content: center; }
+  .wh-name-inp { border: none; outline: none; font-family: inherit; font-size: 13px; color: var(--text); background: transparent; width: 100%; }
+  .wh-name-inp:focus { color: var(--green); }
+  .wh-score-row { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; padding: 8px; background: var(--surface2); border-top: 0.5px solid var(--border); }
+  .weekly-right { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 1rem 1.25rem; }
+  .wh-hist-row { display: flex; align-items: center; gap: 8px; padding: 2px 0; font-size: 11px; }
+  .wh-hist-wk { width: 28px; color: var(--text3); font-weight: 500; text-align: right; flex-shrink: 0; }
+  .wh-hist-pct { width: 34px; font-weight: 600; text-align: right; flex-shrink: 0; }
+  .wh-hist-bar-bg { flex: 1; height: 10px; background: var(--surface2); border: 0.5px solid var(--border); border-radius: 2px; overflow: hidden; }
+  .wh-hist-bar-fill { height: 100%; border-radius: 2px; transition: width 0.35s ease; }
+  .wh-hist-row.active .wh-hist-pct { color: var(--green); }
+  .wh-hist-row.active .wh-hist-wk { color: var(--green); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:4px;">
+    <div class="page-title">Seasonal Habit Tracker</div>
+    <input id="season-name" placeholder="e.g. Autumn 2026" value=""
+      style="font-family:'DM Serif Display',serif;font-size:20px;font-weight:400;color:var(--green);background:transparent;border:none;border-bottom:1.5px solid var(--border);outline:none;padding:2px 4px;min-width:160px;max-width:220px;"
+      onchange="saveSeason(this.value)" title="Click to edit season name" />
+  </div>
+  <div class="page-sub" id="date-range"></div>
+
+  <div class="sync-bar">
+    <div class="sync-dot" id="sdot"></div>
+    <div class="sync-status" id="stxt"><b>Not connected to Google Drive</b> — data saves in this browser only</div>
+    <span class="unsaved-indicator" id="unsaved-ind">Unsaved changes</span>
+    <button class="btn-sm go" id="signin-btn" onclick="signIn()">Connect Google Drive</button>
+    <button class="btn-sm" id="signout-btn" onclick="signOut()" style="display:none">Disconnect</button>
+    <button class="btn-sm" id="save-all-btn" onclick="manualSaveDrive()" style="display:none">Save All to Drive</button>
+  </div>
+
+  <div class="top-row">
+    <div class="card">
+      <div class="card-lbl">Goals &amp; habits</div>
+      <div id="goals-list"></div>
+    </div>
+    <div class="card metrics-card">
+      <div class="metrics-row" id="metrics-row"></div>
+      <div>
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Season overview</div>
+        <div class="mini-bars" id="mini-bars" style="grid-template-columns:repeat(13,1fr);gap:2px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="week-nav">
+    <span class="wk-lbl">Week</span>
+    <div id="week-tabs" style="display:flex;gap:5px;flex-wrap:wrap;"></div>
+  </div>
+
+  <div id="week-date-bar" style="font-size:13px;color:var(--text2);margin-bottom:10px;padding:0 2px;"></div>
+
+  <div class="tracker-wrap">
+    <table>
+      <thead><tr>
+        <th class="hcol">Daily Habits</th>
+        <th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th>
+        <th>Week</th><th>Overall</th><th></th>
+      </tr></thead>
+      <tbody id="habit-tbody"></tbody>
+      <tfoot><tr><td colspan="11"><button class="add-btn" onclick="showAddHabit()">+ Add habit</button></td></tr></tfoot>
+    </table>
+  </div>
+
+  <!-- Weekly Habits Panel -->
+  <div style="display:grid;grid-template-columns:1fr 280px;gap:14px;margin-bottom:1rem;">
+    <div class="weekly-panel">
+      <div class="card-lbl">Weekly Habits</div>
+      <div class="weekly-grid" id="weekly-grid">
+        <div class="wh-header">Habit</div>
+        <div class="wh-header" style="text-align:center;">This Week</div>
+        <div class="wh-header" style="text-align:center;">Overall</div>
+      </div>
+      <div id="weekly-grid-body"></div>
+      <div id="weekly-score-row"></div>
+      <div style="padding:8px 0 0;">
+        <button class="add-btn" onclick="showAddWeeklyHabit()">+ Add weekly habit</button>
+      </div>
+    </div>
+    <div class="weekly-right">
+      <div class="card-lbl">Weekly Habits History</div>
+      <div id="weekly-history"></div>
+    </div>
+  </div>
+
+  <div class="review-card">
+    <div class="card-lbl">Week <span id="rev-wk">1</span> review</div>
+    <div class="review-top">
+      <div>
+        <div class="rev-num" id="rev-num">—</div>
+        <div class="rev-lbl">weekly score</div>
+      </div>
+      <div class="rev-bar-wrap">
+        <div class="rev-bar-bg"><div class="rev-bar-fill" id="rev-bar" style="width:0%;background:var(--text3)"></div></div>
+        <div class="rev-target">Target: 80% &nbsp;·&nbsp; <span id="rev-verdict"></span></div>
+      </div>
+    </div>
+    <div class="rev-fields">
+      <div class="rev-field"><label>What went well?</label><textarea id="r-well" placeholder="Reflect on your wins..." rows="3"></textarea></div>
+      <div class="rev-field"><label>How do I improve?</label><textarea id="r-improve" placeholder="What would I change?" rows="3"></textarea></div>
+    </div>
+  </div>
+
+  <div class="bot-row">
+    <button class="btn pri" onclick="exportCSV()">Export data as CSV</button>
+    <button class="btn season" onclick="startNewSeason()">Start New Season</button>
+    <button class="btn" onclick="clearWeek()">Clear this week</button>
+    <button class="btn dan" onclick="resetAll()">Reset all data</button>
+  </div>
+</div>
+
+<div class="modal-bg" id="add-modal">
+  <div class="modal">
+    <h3>Add new habit</h3>
+    <p>Enter the habit name and which goal it supports.</p>
+    <input id="new-name" placeholder="Habit name..." />
+    <select id="new-goal"></select>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn pri" onclick="confirmAdd()">Add</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="add-weekly-modal">
+  <div class="modal">
+    <h3>Add weekly habit</h3>
+    <p>Enter the weekly habit name (max 10).</p>
+    <input id="new-weekly-name" placeholder="Weekly habit name..." />
+    <div class="modal-btns">
+      <button class="btn" onclick="closeWeeklyModal()">Cancel</button>
+      <button class="btn pri" onclick="confirmAddWeekly()">Add</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const WKS=13;
+const MAX_WEEKLY=10;
+const LKEY='habit_tracker_nick_v3';
+const DFILE='habit_tracker_data.json';
+const TRACKER_FOLDER='1vQeoHVUjkRrrWBpmbYYBixqyNbTsRco5';
+const CLIENT_ID='252560527754-rpr438pbj1ude16sa34cu3r3elik3oqj.apps.googleusercontent.com';
+const SCOPE='https://www.googleapis.com/auth/drive.file';
+
+const DEF={
+  startDate:new Date().toISOString().slice(0,10),
+  seasonName:'',
+  currentWeek:1,
+  lastModified:new Date().toISOString(),
+  goals:[
+    {id:'g1',name:'Improve sleep pattern',open:false},
+    {id:'g2',name:'Get more things done',open:false},
+    {id:'g3',name:'Get weight under 82kg',open:false}
+  ],
+  habits:[
+    {id:'h1',name:'Outside exercise at 8am',goalId:'g1'},
+    {id:'h2',name:'In bed before 12:30am',goalId:'g1'},
+    {id:'h3',name:'Finish at least 1 Action',goalId:'g2'},
+    {id:'h4',name:'Exercise or activity',goalId:'g3'},
+    {id:'h5',name:'Fill in nutrition app',goalId:'g3'}
+  ],
+  weeklyHabits:[
+    {id:'wh1',name:'Food Prep'},
+    {id:'wh2',name:'Clear Unit'},
+    {id:'wh3',name:'Clear Storage'},
+    {id:'wh4',name:'Disposal Run/Sale'}
+  ],
+  checks:{},weeklyChecks:{},reviews:{}
+};
+
+let S=JSON.parse(JSON.stringify(DEF));
+let dfid=null, saveT=null, accessToken=null, hasUnsavedChanges=false;
+
+function loadLocal(){try{const r=localStorage.getItem(LKEY);if(r)S=JSON.parse(r);}catch(e){}}
+function saveLocal(){try{localStorage.setItem(LKEY,JSON.stringify(S));}catch(e){}}
+
+// Ensure data structure has weekly fields (for loading old data without them)
+function ensureWeeklyFields(){
+  if(!S.weeklyHabits)S.weeklyHabits=[];
+  if(!S.weeklyChecks)S.weeklyChecks={};
+}
+
+function sched(){
+  S.lastModified=new Date().toISOString();
+  saveLocal();
+  if(accessToken){
+    hasUnsavedChanges=true;
+    showUnsavedIndicator();
+  }
+}
+
+function showUnsavedIndicator(){
+  const ind=document.getElementById('unsaved-ind');
+  if(ind&&accessToken)ind.classList.add('show');
+}
+
+function hideUnsavedIndicator(){
+  const ind=document.getElementById('unsaved-ind');
+  if(ind)ind.classList.remove('show');
+  hasUnsavedChanges=false;
+}
+
+function ck(w,hid,di){return`w${w}_${hid}_d${di}`;}
+function isCk(w,hid,di){return!!S.checks[ck(w,hid,di)];}
+
+// Weekly habit check key
+function whCk(w,whid){return`w${w}_${whid}`;}
+function isWhCk(w,whid){return!!S.weeklyChecks[whCk(w,whid)];}
+
+function toggle(w,hid,di){
+  const k=ck(w,hid,di);
+  S.checks[k]=!S.checks[k];
+  sched();
+  renderRows();renderReview();renderMetrics();renderBars();renderTabs();renderGoals();
+}
+
+function toggleWeekly(w,whid){
+  const k=whCk(w,whid);
+  S.weeklyChecks[k]=!S.weeklyChecks[k];
+  sched();
+  renderWeeklyPanel();
+}
+
+function wkScore(w){
+  if(!S.habits.length)return null;
+  let done=0;
+  S.habits.forEach(h=>DAYS.forEach((_,di)=>{if(isCk(w,h.id,di))done++;}));
+  return Math.round(done/(S.habits.length*7)*100);
+}
+
+// Weekly habits score for a given week
+function whWkScore(w){
+  if(!S.weeklyHabits||!S.weeklyHabits.length)return null;
+  let done=0;
+  S.weeklyHabits.forEach(wh=>{if(isWhCk(w,wh.id))done++;});
+  return Math.round(done/S.weeklyHabits.length*100);
+}
+
+// Weekly habit overall score (average across all weeks up to current)
+function whOverallScore(whid){
+  const scores=[];
+  for(let w=1;w<=WKS;w++){
+    if(w<=S.currentWeek)scores.push(isWhCk(w,whid)?100:0);
+  }
+  if(!scores.length)return null;
+  return Math.round(scores.reduce((a,b)=>a+b,0)/scores.length);
+}
+
+// Overall weekly habits score across all weeks
+function whSeasonScore(){
+  if(!S.weeklyHabits||!S.weeklyHabits.length)return null;
+  const scores=[];
+  for(let w=1;w<=WKS;w++){
+    if(w<=S.currentWeek){
+      const s=whWkScore(w);
+      if(s!==null)scores.push(s);
+    }
+  }
+  if(!scores.length)return null;
+  return Math.round(scores.reduce((a,b)=>a+b,0)/scores.length);
+}
+
+function scCls(p){
+  if(p===null||p===0)return'sp-n';
+  return p>=80?'sp-g':p>=50?'sp-a':'sp-r';
+}
+
+function scCol(p){
+  if(p===null||p===0)return'transparent';
+  return p>=80?'var(--green)':p>=50?'var(--amber)':'var(--red)';
+}
+
+function goalOverallScore(goalId){
+  const habs=S.habits.filter(h=>h.goalId===goalId);
+  if(!habs.length)return null;
+  const scores=habs.map(h=>habitOverallScore(h.id)).filter(s=>s!==null);
+  if(!scores.length)return null;
+  return Math.round(scores.reduce((a,b)=>a+b,0)/scores.length);
+}
+
+function renderGoals(){
+  const el=document.getElementById('goals-list');
+  el.innerHTML='';
+  S.goals.forEach(g=>{
+    const habs=S.habits.filter(h=>h.goalId===g.id);
+    const goalScore=goalOverallScore(g.id);
+    const scoreHtml=goalScore!==null?`<span class="goal-score ${scCls(goalScore)}">${goalScore}%</span>`:'';
+    const d=document.createElement('div');
+    d.className='goal-item';
+    d.innerHTML=`
+      <div class="goal-hdr" onclick="togGoal('${g.id}')">
+        <span class="goal-arrow${g.open?' open':''}" id="arr-${g.id}">&#9658;</span>
+        <input class="goal-name-inp" value="${g.name}" onclick="event.stopPropagation()" onchange="rnGoal('${g.id}',this.value)" />
+        ${scoreHtml}
+      </div>
+      <div class="goal-habits${g.open?' open':''}" id="gh-${g.id}">
+        ${habs.length?habs.map(h=>`<div class="ghab">${h.name}</div>`).join(''):'<div style="font-size:11px;color:var(--text3);padding:2px 0">No habits yet</div>'}
+      </div>`;
+    el.appendChild(d);
+  });
+}
+
+function togGoal(gid){const g=S.goals.find(x=>x.id===gid);if(g){g.open=!g.open;}renderGoals();}
+function rnGoal(gid,v){const g=S.goals.find(x=>x.id===gid);if(g){g.name=v;sched();renderGoals();renderRows();}}
+
+function renderTabs(){
+  const c=document.getElementById('week-tabs');c.innerHTML='';
+  for(let w=1;w<=WKS;w++){
+    const s=wkScore(w),act=w===S.currentWeek,hd=s!==null&&s>0;
+    const b=document.createElement('button');
+    b.className=`wk-tab${act?' active':''}${hd&&!act?' has':''}`;
+    b.textContent=hd&&!act?`W${w} ${s}%`:`W${w}`;
+    b.onclick=()=>{S.currentWeek=w;saveLocal();renderTabs();renderWeekDateBar();renderRows();renderReview();renderMetrics();renderWeeklyPanel();};
+    c.appendChild(b);
+  }
+}
+
+function habitOverallScore(hid){
+  const weeksWithData=[];
+  for(let w=1;w<=WKS;w++){
+    const done=DAYS.filter((_,di)=>isCk(w,hid,di)).length;
+    if(w<=S.currentWeek) weeksWithData.push(Math.round(done/7*100));
+  }
+  if(!weeksWithData.length)return null;
+  return Math.round(weeksWithData.reduce((a,b)=>a+b,0)/weeksWithData.length);
+}
+
+// Item 2: Move habit up or down
+function moveHabit(hid,dir){
+  const idx=S.habits.findIndex(h=>h.id===hid);
+  if(idx<0)return;
+  const newIdx=idx+dir;
+  if(newIdx<0||newIdx>=S.habits.length)return;
+  const tmp=S.habits[idx];
+  S.habits[idx]=S.habits[newIdx];
+  S.habits[newIdx]=tmp;
+  sched();renderRows();renderGoals();
+}
+
+// Weekly habit reorder
+function moveWeeklyHabit(whid,dir){
+  const idx=S.weeklyHabits.findIndex(h=>h.id===whid);
+  if(idx<0)return;
+  const newIdx=idx+dir;
+  if(newIdx<0||newIdx>=S.weeklyHabits.length)return;
+  const tmp=S.weeklyHabits[idx];
+  S.weeklyHabits[idx]=S.weeklyHabits[newIdx];
+  S.weeklyHabits[newIdx]=tmp;
+  sched();renderWeeklyPanel();
+}
+
+function renderRows(){
+  const w=S.currentWeek,tb=document.getElementById('habit-tbody');
+  tb.innerHTML='';
+  S.habits.forEach((h,idx)=>{
+    const done=DAYS.filter((_,di)=>isCk(w,h.id,di)).length;
+    const pct=Math.round(done/7*100);
+    const overall=habitOverallScore(h.id);
+    const goalOpts=S.goals.map(g=>`<option value="${g.id}"${g.id===h.goalId?' selected':''}>${g.name}</option>`).join('');
+    const upBtn=idx>0?`<button class="move-btn" onclick="moveHabit('${h.id}',-1)" title="Move up">▲</button>`:'<span style="display:inline-block;width:14px;"></span>';
+    const dnBtn=idx<S.habits.length-1?`<button class="move-btn" onclick="moveHabit('${h.id}',1)" title="Move down">▼</button>`:'<span style="display:inline-block;width:14px;"></span>';
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td class="hcell">
+        <input class="hab-inp" value="${h.name}" onchange="rnHab('${h.id}',this.value)" title="Click to rename" />
+        <select class="goal-sel" onchange="reassignHabit('${h.id}',this.value)" title="Change goal">${goalOpts}</select>
+      </td>
+      ${DAYS.map((_,di)=>`<td><div class="chk${isCk(w,h.id,di)?' on':''}" onclick="toggle(${w},'${h.id}',${di})"></div></td>`).join('')}
+      <td><span class="spill ${scCls(done>0?pct:null)}">${done>0?pct+'%':'—'}</span></td>
+      <td><span class="spill ${scCls(overall!==null&&overall>0?overall:null)}">${overall!==null&&overall>0?overall+'%':'—'}</span></td>
+      <td style="white-space:nowrap;">${upBtn}${dnBtn}<button class="del-btn" onclick="delHabit('${h.id}')" title="Remove habit">✕</button></td>`;
+    tb.appendChild(tr);
+  });
+}
+
+// Weekly Habits Panel rendering
+function renderWeeklyPanel(){
+  ensureWeeklyFields();
+  const w=S.currentWeek;
+  const body=document.getElementById('weekly-grid-body');
+  const scoreRow=document.getElementById('weekly-score-row');
+  body.innerHTML='';
+
+  if(!S.weeklyHabits.length){
+    body.innerHTML='<div style="padding:12px 8px;font-size:12px;color:var(--text3);">No weekly habits yet. Click + Add weekly habit to get started.</div>';
+    scoreRow.innerHTML='';
+    renderWeeklyHistory();
+    return;
+  }
+
+  S.weeklyHabits.forEach((wh,idx)=>{
+    const checked=isWhCk(w,wh.id);
+    const overall=whOverallScore(wh.id);
+    const upBtn=idx>0?`<button class="move-btn" onclick="moveWeeklyHabit('${wh.id}',-1)" title="Move up">▲</button>`:'<span style="display:inline-block;width:14px;"></span>';
+    const dnBtn=idx<S.weeklyHabits.length-1?`<button class="move-btn" onclick="moveWeeklyHabit('${wh.id}',1)" title="Move down">▼</button>`:'<span style="display:inline-block;width:14px;"></span>';
+    const row=document.createElement('div');
+    row.style.cssText='display:grid;grid-template-columns:1fr auto auto auto;border-bottom:0.5px solid #f5f3ef;';
+    row.innerHTML=`
+      <div class="wh-cell">
+        <input class="wh-name-inp" value="${wh.name}" onchange="rnWeeklyHabit('${wh.id}',this.value)" title="Click to rename" />
+      </div>
+      <div class="wh-cell wh-cell-center" style="min-width:70px;">
+        <div class="chk${checked?' on':''}" onclick="toggleWeekly(${w},'${wh.id}')"></div>
+      </div>
+      <div class="wh-cell wh-cell-center" style="min-width:70px;">
+        <span class="spill ${scCls(overall!==null&&overall>0?overall:null)}">${overall!==null&&overall>0?overall+'%':'—'}</span>
+      </div>
+      <div class="wh-cell wh-cell-center" style="white-space:nowrap;">
+        ${upBtn}${dnBtn}<button class="del-btn" onclick="delWeeklyHabit('${wh.id}')" title="Remove">✕</button>
+      </div>`;
+    body.appendChild(row);
+  });
+
+  // Score row
+  const thisWkScore=whWkScore(w);
+  const seasonSc=whSeasonScore();
+  scoreRow.innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr auto auto auto;background:var(--surface2);border-top:0.5px solid var(--border);padding:0;">
+      <div style="padding:8px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;">Score %</div>
+      <div style="padding:8px;min-width:70px;text-align:center;">
+        <span class="spill ${scCls(thisWkScore)}">${thisWkScore!==null?thisWkScore+'%':'—'}</span>
+      </div>
+      <div style="padding:8px;min-width:70px;text-align:center;">
+        <span class="spill ${scCls(seasonSc)}">${seasonSc!==null?seasonSc+'%':'—'}</span>
+      </div>
+      <div style="padding:8px;min-width:70px;"></div>
+    </div>`;
+
+  renderWeeklyHistory();
+}
+
+function renderWeeklyHistory(){
+  const hist=document.getElementById('weekly-history');
+  hist.innerHTML='';
+  const scores=[];
+  for(let w=1;w<=WKS;w++){
+    scores.push(w<=S.currentWeek?whWkScore(w):null);
+  }
+  const maxScore=Math.max(...scores.filter(s=>s!==null&&s>0),1);
+
+  for(let w=1;w<=WKS;w++){
+    const s=scores[w-1];
+    const isActive=w===S.currentWeek;
+    const hasPct=s!==null&&s>0;
+    const barW=hasPct?Math.round(s/100*100):0;
+    const col=scCol(s);
+    const row=document.createElement('div');
+    row.className='wh-hist-row'+(isActive?' active':'');
+    row.innerHTML=`
+      <div class="wh-hist-wk">W${w}</div>
+      <div class="wh-hist-pct"${isActive?' style="color:var(--green);"':''}>${hasPct?s+'%':'—'}</div>
+      <div class="wh-hist-bar-bg"><div class="wh-hist-bar-fill" style="width:${barW}%;background:${col};"></div></div>`;
+    hist.appendChild(row);
+  }
+}
+
+// Weekly habit management
+function showAddWeeklyHabit(){
+  ensureWeeklyFields();
+  if(S.weeklyHabits.length>=MAX_WEEKLY){alert('Maximum '+MAX_WEEKLY+' weekly habits allowed.');return;}
+  document.getElementById('new-weekly-name').value='';
+  document.getElementById('add-weekly-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('new-weekly-name').focus(),100);
+}
+function closeWeeklyModal(){document.getElementById('add-weekly-modal').classList.remove('open');}
+function confirmAddWeekly(){
+  const name=document.getElementById('new-weekly-name').value.trim();
+  if(!name)return;
+  ensureWeeklyFields();
+  S.weeklyHabits.push({id:'wh'+Date.now(),name});
+  sched();closeWeeklyModal();renderWeeklyPanel();
+}
+function rnWeeklyHabit(whid,v){const wh=S.weeklyHabits.find(x=>x.id===whid);if(wh){wh.name=v;sched();}}
+function delWeeklyHabit(whid){
+  if(!confirm('Remove this weekly habit? All its tick data will be deleted.'))return;
+  S.weeklyHabits=S.weeklyHabits.filter(x=>x.id!==whid);
+  Object.keys(S.weeklyChecks).filter(k=>k.includes(`_${whid}`)).forEach(k=>delete S.weeklyChecks[k]);
+  sched();renderWeeklyPanel();
+}
+
+function renderReview(){
+  const w=S.currentWeek,pct=wkScore(w);
+  document.getElementById('rev-wk').textContent=w;
+  const n=document.getElementById('rev-num'),bar=document.getElementById('rev-bar'),v=document.getElementById('rev-verdict');
+  if(!pct){n.textContent='—';n.className='rev-num n';bar.style.width='0%';v.textContent='';}
+  else{
+    n.textContent=pct+'%';
+    n.className='rev-num'+(pct>=80?'':pct>=50?' a':' r');
+    bar.style.width=pct+'%';
+    bar.style.background=pct>=80?'var(--green)':pct>=50?'var(--amber)':'var(--red)';
+    v.textContent=pct>=80?'On track — great work':'Below 80% — consider adjusting habits';
+    v.style.color=pct>=80?'var(--green)':'var(--amber)';
+  }
+  const rev=S.reviews[w]||{};
+  document.getElementById('r-well').value=rev.well||'';
+  document.getElementById('r-improve').value=rev.improve||'';
+}
+
+function renderMetrics(){
+  const sc=[];for(let w=1;w<=WKS;w++){const s=wkScore(w);if(s!==null&&s>0)sc.push(s);}
+  const tw=wkScore(S.currentWeek),best=sc.length?Math.max(...sc):null,avg=sc.length?Math.round(sc.reduce((a,b)=>a+b,0)/sc.length):null;
+  document.getElementById('metrics-row').innerHTML=[
+    ['Overall',avg!==null?avg+'%':'—',avg>=80,false],
+    ['This week',tw&&tw>0?tw+'%':'—',tw>=80,true],
+    ['Best week',best!==null?best+'%':'—',best>=80,false]
+  ].map(([l,v,g,bold])=>`<div class="metric"><div class="metric-val${g?' good':''}${bold?' bold':''}">${v}</div><div class="metric-lbl">${l}</div></div>`).join('');
+}
+
+function renderBars(){
+  const c=document.getElementById('mini-bars');c.innerHTML='';
+  const sc=[];for(let w=1;w<=WKS;w++)sc.push(wkScore(w)||0);
+  const mx=Math.max(...sc,1);
+  sc.forEach((s,i)=>{
+    const h=Math.round(s/mx*100);
+    const col=s>=80?'var(--green)':s>=50?'var(--amber)':s>0?'var(--red)':'transparent';
+    const d=document.createElement('div');d.className='mbar-wrap';d.title=`Week ${i+1}: ${s}%`;
+    d.innerHTML=`<div class="mbar-bg"><div class="mbar-fill" style="height:${h}%;background:${col}"></div></div><div class="mbar-lbl">${i+1}</div>`;
+    c.appendChild(d);
+  });
+}
+
+function nearestMonday(dateStr){
+  const d=new Date(dateStr);
+  const day=d.getDay();
+  const diff=day===0?-6:1-day;
+  d.setDate(d.getDate()+diff);
+  return d.toISOString().slice(0,10);
+}
+
+function weekStart(w){
+  const d=new Date(S.startDate);
+  d.setDate(d.getDate()+(w-1)*7);
+  return d;
+}
+
+function weekEnd(w){
+  const d=weekStart(w);
+  d.setDate(d.getDate()+6);
+  return d;
+}
+
+function fmtDate(d,includeYear){
+  return d.toLocaleDateString('en-AU',{day:'numeric',month:'short',...(includeYear?{year:'numeric'}:{})});
+}
+
+function renderDateRange(){
+  const st=new Date(S.startDate);
+  const en=weekEnd(WKS);
+  const stStr=fmtDate(st,true);
+  const enStr=fmtDate(en,true);
+  document.getElementById('date-range').innerHTML=
+    `${stStr} — ${enStr} &nbsp;<button onclick="editStartDate()" style="font-size:11px;color:var(--green);background:none;border:none;cursor:pointer;font-family:inherit;padding:0;">edit start date</button>`;
+}
+
+function renderWeekDateBar(){
+  const w=S.currentWeek;
+  const st=weekStart(w);
+  const en=weekEnd(w);
+  const f=d=>d.toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'});
+  document.getElementById('week-date-bar').textContent=`Week ${w}  ·  ${f(st)} — ${f(en)}`;
+}
+
+function editStartDate(){
+  const current=S.startDate;
+  const input=prompt('Enter new start date (any date — it will snap to the nearest Monday):\nFormat: YYYY-MM-DD e.g. 2026-03-23',current);
+  if(!input)return;
+  const snapped=nearestMonday(input);
+  if(!snapped||isNaN(new Date(snapped).getTime())){alert('Invalid date — please use YYYY-MM-DD format.');return;}
+  S.startDate=snapped;
+  sched();render();
+}
+
+function saveSeason(v){S.seasonName=v;sched();}
+
+function render(){
+  const snapped=nearestMonday(S.startDate);
+  if(snapped!==S.startDate){S.startDate=snapped;}
+  ensureWeeklyFields();
+  document.getElementById('season-name').value=S.seasonName||'';
+  renderDateRange();renderGoals();renderTabs();renderWeekDateBar();renderRows();renderReview();renderMetrics();renderBars();renderWeeklyPanel();
+}
+
+function showAddHabit(){
+  const sel=document.getElementById('new-goal');
+  sel.innerHTML=S.goals.map(g=>`<option value="${g.id}">${g.name}</option>`).join('');
+  document.getElementById('new-name').value='';
+  document.getElementById('add-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('new-name').focus(),100);
+}
+function closeModal(){document.getElementById('add-modal').classList.remove('open');}
+function confirmAdd(){
+  const name=document.getElementById('new-name').value.trim();
+  const goalId=document.getElementById('new-goal').value;
+  if(!name)return;
+  S.habits.push({id:'h'+Date.now(),name,goalId});
+  sched();closeModal();render();
+}
+function rnHab(hid,v){const h=S.habits.find(x=>x.id===hid);if(h){h.name=v;sched();renderGoals();}}
+function reassignHabit(hid,gid){const h=S.habits.find(x=>x.id===hid);if(h){h.goalId=gid;sched();renderGoals();}}
+function delHabit(hid){
+  if(!confirm('Remove this habit? All its tick data will be deleted.'))return;
+  S.habits=S.habits.filter(x=>x.id!==hid);
+  Object.keys(S.checks).filter(k=>k.includes(`_${hid}_`)).forEach(k=>delete S.checks[k]);
+  sched();render();
+}
+function clearWeek(){
+  if(!confirm(`Clear all ticks for week ${S.currentWeek}?`))return;
+  S.habits.forEach(h=>DAYS.forEach((_,di)=>delete S.checks[ck(S.currentWeek,h.id,di)]));
+  if(S.weeklyHabits){S.weeklyHabits.forEach(wh=>delete S.weeklyChecks[whCk(S.currentWeek,wh.id)]);}
+  sched();render();
+}
+function resetAll(){
+  if(!confirm('Reset ALL data? This cannot be undone.'))return;
+  S=JSON.parse(JSON.stringify(DEF));S.startDate=new Date().toISOString().slice(0,10);
+  sched();render();
+}
+
+// Item 7: Start New Season
+function startNewSeason(){
+  // Step 1: Export CSV first
+  exportCSV();
+
+  // Step 2: Confirmation
+  const msg='Start new season?\n\n'+
+    'This will:\n'+
+    '  • The current season CSV has just been downloaded\n'+
+    '  • Clear all daily ticks and weekly ticks\n'+
+    '  • Clear all weekly reviews\n'+
+    '  • Keep all goals, daily habits, and weekly habits\n'+
+    '  • Reset to Week 1 with today as the start date\n\n'+
+    'The current season data is preserved in the CSV just downloaded.\n\n'+
+    'Continue?';
+  if(!confirm(msg))return;
+
+  // Step 3: Ask for new season name
+  const today=new Date();
+  const month=today.getMonth(); // 0-11
+  let suggestedSeason='';
+  if(month>=2&&month<=4)suggestedSeason=today.getFullYear()+'_1Autumn';
+  else if(month>=5&&month<=7)suggestedSeason=today.getFullYear()+'_2Winter';
+  else if(month>=8&&month<=10)suggestedSeason=today.getFullYear()+'_3Spring';
+  else suggestedSeason=today.getFullYear()+'_4Summer';
+
+  const newName=prompt('Enter the new season name:',suggestedSeason);
+  if(newName===null)return; // cancelled
+
+  // Step 4: Clear data, keep definitions
+  S.checks={};
+  S.weeklyChecks={};
+  S.reviews={};
+  S.currentWeek=1;
+  S.startDate=nearestMonday(today.toISOString().slice(0,10));
+  S.seasonName=newName||suggestedSeason;
+  S.lastModified=new Date().toISOString();
+
+  sched();render();
+  alert('✓ New season started!\n\nSeason: '+S.seasonName+'\nStart date: '+S.startDate+'\n\nRemember to Save All to Drive.');
+}
+
+function exportCSV(){
+  const rows=[['Week','Week start','Week end','Habit','Goal','Mon','Tue','Wed','Thu','Fri','Sat','Sun','Week score%','Overall score%']];
+  for(let w=1;w<=WKS;w++){
+    const wst=weekStart(w);
+    const wen=weekEnd(w);
+    const wstStr=fmtDate(wst,true);
+    const wenStr=fmtDate(wen,true);
+    S.habits.forEach(h=>{
+      const gn=(S.goals.find(g=>g.id===h.goalId)||{}).name||'';
+      const days=DAYS.map((_,di)=>isCk(w,h.id,di)?1:0);
+      const weekScore=Math.round(days.reduce((a,b)=>a+b,0)/7*100);
+      const overall=habitOverallScore(h.id);
+      rows.push([w,wstStr,wenStr,h.name,gn,...days,weekScore,overall!==null?overall:'']);
+    });
+  }
+  
+  // Weekly reviews section
+  rows.push(['','','','','','','','','','','','','','']);
+  rows.push(['WEEKLY REVIEWS','','','','','','','','','','','','','']);
+  rows.push(['Week','Well','Improve']);
+  for(let w=1;w<=WKS;w++){
+    const rev=S.reviews[w]||{};
+    rows.push([w,rev.well||'',rev.improve||'']);
+  }
+  
+  // Goal summary section
+  rows.push(['','','','','','','','','','','','','','']);
+  rows.push(['GOAL SUMMARY','','','','','','','','','','','','','']);
+  rows.push(['Goal','Overall Score %']);
+  S.goals.forEach(g=>{
+    const score=goalOverallScore(g.id);
+    rows.push([g.name,score!==null?score+'%':'']);
+  });
+
+  // Weekly habits section
+  ensureWeeklyFields();
+  if(S.weeklyHabits.length>0){
+    rows.push(['','','','','','','','','','','','','','']);
+    rows.push(['WEEKLY HABITS','','','','','','','','','','','','','']);
+    const whHeaders=['Week','Week start','Week end',...S.weeklyHabits.map(wh=>wh.name),'Score %'];
+    rows.push(whHeaders);
+    for(let w=1;w<=WKS;w++){
+      const wst=weekStart(w);
+      const wen=weekEnd(w);
+      const wstStr=fmtDate(wst,true);
+      const wenStr=fmtDate(wen,true);
+      const ticks=S.weeklyHabits.map(wh=>isWhCk(w,wh.id)?1:0);
+      const sc=whWkScore(w);
+      rows.push([w,wstStr,wenStr,...ticks,sc!==null?sc+'%':'']);
+    }
+
+    rows.push(['','','','','','','','','','','','','','']);
+    rows.push(['WEEKLY HABITS OVERALL','','','','','','','','','','','','','']);
+    rows.push(['Habit','Overall %']);
+    S.weeklyHabits.forEach(wh=>{
+      const sc=whOverallScore(wh.id);
+      rows.push([wh.name,sc!==null?sc+'%':'']);
+    });
+  }
+  
+  const csv=rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
+  const seasonSlug=(S.seasonName||'habits').replace(/\s+/g,'_');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download=`habits_${seasonSlug}.csv`;a.click();
+}
+
+document.getElementById('r-well').addEventListener('input',function(){
+  if(!S.reviews[S.currentWeek])S.reviews[S.currentWeek]={};
+  S.reviews[S.currentWeek].well=this.value;sched();
+});
+document.getElementById('r-improve').addEventListener('input',function(){
+  if(!S.reviews[S.currentWeek])S.reviews[S.currentWeek]={};
+  S.reviews[S.currentWeek].improve=this.value;sched();
+});
+
+// Google Drive sync — using modern Google Identity Services + fetch
+let tokenClient=null;
+let gisLoaded=false;
+let gapiLoaded=false;
+let tokenIssuedAt=0;
+
+function setSS(state,msg){
+  const dot=document.getElementById('sdot'),txt=document.getElementById('stxt');
+  const si=document.getElementById('signin-btn'),so=document.getElementById('signout-btn'),sb=document.getElementById('save-all-btn');
+  if(state==='ok'){dot.className='sync-dot ok';txt.innerHTML=`<b>Connected to Google Drive</b> — ${msg||'ready to save'}`;si.style.display='none';so.style.display='';sb.style.display='';}
+  else if(state==='busy'){dot.className='sync-dot busy';txt.innerHTML=`<b>Saving to Google Drive...</b>`;}
+  else if(state==='returning'){dot.className='sync-dot';txt.innerHTML=`<b>Google Drive</b> — click to reconnect`;si.textContent='Reconnect';si.style.display='';so.style.display='none';sb.style.display='none';}
+  else{dot.className='sync-dot';txt.innerHTML=`<b>Not connected to Google Drive</b> — data saves in this browser only`;si.textContent='Connect Google Drive';si.style.display='';so.style.display='none';sb.style.display='none';}
+}
+
+function onGisLoad(){
+  gisLoaded=true;
+  tokenClient=google.accounts.oauth2.initTokenClient({
+    client_id:CLIENT_ID,
+    scope:SCOPE,
+    callback:(resp)=>{
+      if(resp.error){console.warn('Auth error:',resp);return;}
+      accessToken=resp.access_token;
+      tokenIssuedAt=Date.now();
+      localStorage.setItem('ht_autoconnect','1');
+      setSS('busy','connecting...');
+      loadDrive();
+    }
+  });
+  if(localStorage.getItem('ht_autoconnect')==='1'){
+    setSS('returning');
+  }
+}
+
+function onGapiLoad(){
+  gapi.load('client',()=>{
+    gapi.client.init({}).then(()=>{gapiLoaded=true;});
+  });
+}
+
+function signIn(){
+  if(!gisLoaded||!tokenClient){alert('Google sign-in is still initialising. Please wait a moment and try again.');return;}
+  const isReturning=localStorage.getItem('ht_autoconnect')==='1';
+  tokenClient.requestAccessToken({prompt: isReturning ? '' : 'select_account'});
+}
+
+function signOut(){
+  if(accessToken){
+    google.accounts.oauth2.revoke(accessToken,()=>{});
+    accessToken=null;
+    dfid=null;
+  }
+  localStorage.removeItem('ht_autoconnect');
+  setSS('off');
+}
+
+async function driveRequest(method,url,body,isJson){
+  const headers={Authorization:'Bearer '+accessToken};
+  if(isJson)headers['Content-Type']='application/json';
+  const r=await fetch(url,{method,headers,body});
+  return r;
+}
+
+async function findFile(){
+  const q=encodeURIComponent(`name='${DFILE}' and '${TRACKER_FOLDER}' in parents and trashed=false`);
+  const r=await driveRequest('GET',`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)&spaces=drive`);
+  const d=await r.json();
+  return d.files&&d.files.length?d.files[0].id:null;
+}
+
+async function loadDrive(){
+  try{
+    const fid=await findFile();
+    if(!fid){
+      setSS('ok','no existing data found — use Save All to create');
+      return;
+    }
+    dfid=fid;
+    const r=await driveRequest('GET',`https://www.googleapis.com/drive/v3/files/${fid}?alt=media`);
+    const text=await r.text();
+    const driveData=JSON.parse(text);
+    
+    const localData=S;
+    
+    const driveTime=driveData.lastModified?new Date(driveData.lastModified):new Date(0);
+    const localTime=localData.lastModified?new Date(localData.lastModified):new Date(0);
+    const driveHabits=driveData.habits?driveData.habits.length:0;
+    const localHabits=localData.habits?localData.habits.length:0;
+    const driveChecks=driveData.checks?Object.keys(driveData.checks).length:0;
+    const localChecks=localData.checks?Object.keys(localData.checks).length:0;
+    
+    const formatTime=(d)=>{
+      if(d.getTime()===0)return'unknown';
+      const opts={year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',hour12:true};
+      return d.toLocaleString('en-AU',opts);
+    };
+    
+    const localIsNewer=localTime>driveTime;
+    const localHasMore=(localHabits>driveHabits)||(localHabits===driveHabits&&localChecks>=driveChecks);
+    
+    if(!localData.lastModified||localTime.getTime()===0){
+      const msg=`Data found on Google Drive:\n\n`+
+        `Google Drive: ${driveHabits} habits, ${driveChecks} checks\n`+
+        `Last saved: ${formatTime(driveTime)}\n\n`+
+        `Your local data: ${localHabits} habits, ${localChecks} checks\n`+
+        `Last modified: ${formatTime(localTime)}\n\n`+
+        `Load data from Google Drive?`;
+      if(confirm(msg)){
+        S=driveData;
+        ensureWeeklyFields();
+        saveLocal();
+        render();
+        setSS('ok','loaded from Drive');
+      }else{
+        setSS('ok','kept local data — use Save All to update Drive');
+      }
+    }else if(localIsNewer&&localHasMore){
+      const msg=`Data Comparison:\n\n`+
+        `Google Drive: ${driveHabits} habits, ${driveChecks} checks\n`+
+        `Last saved: ${formatTime(driveTime)}\n\n`+
+        `Your Local Data: ${localHabits} habits, ${localChecks} checks\n`+
+        `Last modified: ${formatTime(localTime)}\n\n`+
+        `Your local data is NEWER and has MORE content.\n\n`+
+        `Keep your local data?\n`+
+        `(Click OK to keep local, Cancel to load from Drive)`;
+      if(confirm(msg)){
+        setSS('ok','kept local data — remember to Save All to update Drive');
+      }else{
+        S=driveData;
+        ensureWeeklyFields();
+        saveLocal();
+        render();
+        setSS('ok','loaded from Drive');
+      }
+    }else{
+      const msg=`Data Comparison:\n\n`+
+        `Google Drive: ${driveHabits} habits, ${driveChecks} checks\n`+
+        `Last saved: ${formatTime(driveTime)}\n\n`+
+        `Your Local Data: ${localHabits} habits, ${localChecks} checks\n`+
+        `Last modified: ${formatTime(localTime)}\n\n`+
+        `${!localIsNewer?'Drive data is NEWER.\n\n':'Drive has MORE content.\n\n'}`+
+        `Load data from Google Drive?\n`+
+        `(Click OK to load from Drive, Cancel to keep local)`;
+      if(confirm(msg)){
+        S=driveData;
+        ensureWeeklyFields();
+        saveLocal();
+        render();
+        setSS('ok','loaded from Drive');
+      }else{
+        setSS('ok','kept local data — use Save All to update Drive');
+      }
+    }
+  }catch(e){
+    console.warn('Drive load:',e);
+    setSS('ok','load failed — using local data');
+  }
+}
+
+async function ensureFreshToken(){
+  const tokenAgeMin=(Date.now()-tokenIssuedAt)/60000;
+  if(!accessToken||tokenAgeMin>50){
+    return new Promise((resolve,reject)=>{
+      if(!tokenClient){reject(new Error('Token client not ready'));return;}
+      const originalCallback=tokenClient.callback;
+      tokenClient.callback=(resp)=>{
+        tokenClient.callback=originalCallback;
+        if(resp.error){reject(new Error('Token refresh failed: '+resp.error));return;}
+        accessToken=resp.access_token;
+        tokenIssuedAt=Date.now();
+        resolve();
+      };
+      tokenClient.requestAccessToken({prompt:''});
+    });
+  }
+}
+
+async function saveDrive(){
+  if(!accessToken)throw new Error('Not connected to Google Drive');
+  await ensureFreshToken();
+  try{
+    setSS('busy');
+    const body=JSON.stringify(S);
+    console.log('=== SAVING TO DRIVE ===');
+    console.log('Habits:',S.habits.length);
+    console.log('Checks:',Object.keys(S.checks).length);
+    console.log('Last Modified:',S.lastModified);
+    console.log('JSON size:',body.length,'bytes');
+    if(!dfid){
+      const fm=new FormData();
+      fm.append('metadata',new Blob([JSON.stringify({name:DFILE,parents:[TRACKER_FOLDER]})],{type:'application/json'}));
+      fm.append('file',new Blob([body],{type:'application/json'}));
+      const r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{Authorization:'Bearer '+accessToken},body:fm});
+      if(!r.ok)throw new Error('Drive create failed: HTTP '+r.status+' '+r.statusText);
+      const d=await r.json();
+      dfid=d.id;
+      console.log('Created new file, ID:',dfid);
+    }else{
+      const r=await driveRequest('PATCH',`https://www.googleapis.com/upload/drive/v3/files/${dfid}?uploadType=media`,body,true);
+      if(!r.ok)throw new Error('Drive save failed: HTTP '+r.status+' '+r.statusText);
+      console.log('Updated existing file, ID:',dfid);
+    }
+    console.log('=== SAVE COMPLETE ===');
+    setSS('ok','saved just now');
+  }catch(e){
+    console.error('Drive save failed:',e);
+    setSS('ok','save failed — check connection');
+    throw e;
+  }
+}
+
+async function manualSaveDrive(){
+  if(!accessToken){alert('Not connected to Google Drive. Please connect first.');return;}
+  const saveBtn=document.getElementById('save-all-btn');
+  saveBtn.disabled=true;
+  saveBtn.textContent='Saving...';
+  try{
+    await saveDrive();
+    hideUnsavedIndicator();
+    
+    const formatTime=(isoStr)=>{
+      const d=new Date(isoStr);
+      const opts={year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',hour12:true};
+      return d.toLocaleString('en-AU',opts);
+    };
+    
+    const habitCount=S.habits.length;
+    const checkCount=Object.keys(S.checks).length;
+    const weeklyCount=S.weeklyHabits?S.weeklyHabits.length:0;
+    const weeklyCheckCount=S.weeklyChecks?Object.keys(S.weeklyChecks).length:0;
+    const timeStr=S.lastModified?formatTime(S.lastModified):'just now';
+    
+    const confirmMsg=`✓ Saved successfully!\n\n${habitCount} daily habits, ${checkCount} daily checks\n${weeklyCount} weekly habits, ${weeklyCheckCount} weekly checks\nLast saved: ${timeStr}`;
+    
+    saveBtn.textContent='Saved!';
+    alert(confirmMsg);
+    
+    setTimeout(()=>{
+      saveBtn.textContent='Save All to Drive';
+      saveBtn.disabled=false;
+    },1000);
+  }catch(e){
+    console.error('Manual save failed:',e);
+    alert('✗ Save FAILED!\n\nReason: '+e.message+'\n\nYour ticks are saved in this browser only.\nTry clicking Save All to Drive again, or click Reconnect at the top if the problem continues.');
+    saveBtn.textContent='Save All to Drive';
+    saveBtn.disabled=false;
+  }
+}
+
+loadLocal();ensureWeeklyFields();render();
+</script>
+<script src="https://apis.google.com/js/api.js" onload="onGapiLoad()"></script>
+<script src="https://accounts.google.com/gsi/client" onload="onGisLoad()"></script>
+</body>
+</html>
