@@ -146,6 +146,10 @@
   .wh-hist-bar-fill { height: 100%; border-radius: 2px; transition: width 0.35s ease; }
   .wh-hist-row.active .wh-hist-pct { color: var(--green); }
   .wh-hist-row.active .wh-hist-wk { color: var(--green); font-weight: 600; }
+
+  /* Auto-fade toast (save success) */
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(10px); background: var(--green); color: #fff; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; padding: 12px 20px; border-radius: var(--radius-sm); box-shadow: 0 4px 16px rgba(0,0,0,0.18); z-index: 200; opacity: 0; pointer-events: none; transition: opacity 0.4s ease, transform 0.4s ease; max-width: 90%; white-space: pre-line; text-align: center; line-height: 1.5; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 </style>
 </head>
 <body>
@@ -204,10 +208,11 @@
   <div style="display:grid;grid-template-columns:1fr 280px;gap:14px;margin-bottom:1rem;">
     <div class="weekly-panel">
       <div class="card-lbl">Weekly Habits</div>
-      <div class="weekly-grid" id="weekly-grid">
+      <div class="weekly-grid" id="weekly-grid" style="grid-template-columns:1fr auto auto auto;">
         <div class="wh-header">Habit</div>
-        <div class="wh-header" style="text-align:center;">This Week</div>
-        <div class="wh-header" style="text-align:center;">Overall</div>
+        <div class="wh-header" style="text-align:center;min-width:70px;">This Week</div>
+        <div class="wh-header" style="text-align:center;min-width:70px;">Overall</div>
+        <div class="wh-header" style="min-width:70px;"></div>
       </div>
       <div id="weekly-grid-body"></div>
       <div id="weekly-score-row"></div>
@@ -221,18 +226,30 @@
     </div>
   </div>
 
-  <div class="review-card">
-    <div class="card-lbl">Week <span id="rev-wk">1</span> review</div>
-    <div class="review-top">
-      <div>
-        <div class="rev-num" id="rev-num">—</div>
-        <div class="rev-lbl">weekly score</div>
+  <!-- Monthly Habits Panel -->
+  <div style="display:grid;grid-template-columns:1fr 280px;gap:14px;margin-bottom:1rem;">
+    <div class="weekly-panel">
+      <div class="card-lbl">Monthly Habits</div>
+      <div class="weekly-grid" id="monthly-grid" style="grid-template-columns:1fr auto auto auto;">
+        <div class="wh-header">Habit</div>
+        <div class="wh-header" style="text-align:center;min-width:70px;" id="monthly-thisperiod-hdr">This Month</div>
+        <div class="wh-header" style="text-align:center;min-width:70px;">Overall</div>
+        <div class="wh-header" style="min-width:70px;"></div>
       </div>
-      <div class="rev-bar-wrap">
-        <div class="rev-bar-bg"><div class="rev-bar-fill" id="rev-bar" style="width:0%;background:var(--text3)"></div></div>
-        <div class="rev-target">Target: 80% &nbsp;·&nbsp; <span id="rev-verdict"></span></div>
+      <div id="monthly-grid-body"></div>
+      <div id="monthly-score-row"></div>
+      <div style="padding:8px 0 0;">
+        <button class="add-btn" onclick="showAddMonthlyHabit()">+ Add monthly habit</button>
       </div>
     </div>
+    <div class="weekly-right">
+      <div class="card-lbl">Monthly Habits History</div>
+      <div id="monthly-history"></div>
+    </div>
+  </div>
+
+  <div class="review-card">
+    <div class="card-lbl">Week <span id="rev-wk">1</span> review</div>
     <div class="rev-fields">
       <div class="rev-field"><label>What went well?</label><textarea id="r-well" placeholder="Reflect on your wins..." rows="3"></textarea></div>
       <div class="rev-field"><label>How do I improve?</label><textarea id="r-improve" placeholder="What would I change?" rows="3"></textarea></div>
@@ -272,10 +289,42 @@
   </div>
 </div>
 
+<div class="toast" id="toast"></div>
+
+<div class="modal-bg" id="add-monthly-modal">
+  <div class="modal">
+    <h3>Add monthly habit</h3>
+    <p>Enter the monthly habit name (max 10).</p>
+    <input id="new-monthly-name" placeholder="Monthly habit name..." />
+    <div class="modal-btns">
+      <button class="btn" onclick="closeMonthlyModal()">Cancel</button>
+      <button class="btn pri" onclick="confirmAddMonthly()">Add</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const WKS=13;
 const MAX_WEEKLY=10;
+const MAX_MONTHLY=10;
+// Fixed 4+4+5 month periods: [startWeek, endWeek] for periods 1,2,3
+const MONTH_PERIODS=[[1,4],[5,8],[9,13]];
+// Which month period (1,2,3) does a given week fall in?
+function weekToPeriod(w){
+  for(let p=0;p<MONTH_PERIODS.length;p++){
+    if(w>=MONTH_PERIODS[p][0]&&w<=MONTH_PERIODS[p][1])return p+1;
+  }
+  return 1;
+}
+// Auto-derive the calendar month name for a period, by its midpoint date (majority month)
+function periodMonthName(period){
+  const [sw,ew]=MONTH_PERIODS[period-1];
+  const start=weekStart(sw);
+  const end=weekEnd(ew);
+  const mid=new Date((start.getTime()+end.getTime())/2);
+  return mid.toLocaleDateString('en-AU',{month:'long'});
+}
 const LKEY='habit_tracker_nick_v3';
 const DFILE='habit_tracker_data.json';
 const TRACKER_FOLDER='1jx-Ai-8HWD4PUeopoHAS8z_D783w2F7h';
@@ -305,7 +354,12 @@ const DEF={
     {id:'wh3',name:'Clear Storage'},
     {id:'wh4',name:'Disposal Run/Sale'}
   ],
-  checks:{},weeklyChecks:{},reviews:{}
+  monthlyHabits:[
+    {id:'mh1',name:'Contact a relative'},
+    {id:'mh2',name:'Attend a social event'},
+    {id:'mh3',name:'Try something new'}
+  ],
+  checks:{},weeklyChecks:{},monthlyChecks:{},reviews:{}
 };
 
 let S=JSON.parse(JSON.stringify(DEF));
@@ -314,10 +368,12 @@ let dfid=null, saveT=null, accessToken=null, hasUnsavedChanges=false;
 function loadLocal(){try{const r=localStorage.getItem(LKEY);if(r)S=JSON.parse(r);}catch(e){}}
 function saveLocal(){try{localStorage.setItem(LKEY,JSON.stringify(S));}catch(e){}}
 
-// Ensure data structure has weekly fields (for loading old data without them)
+// Ensure data structure has weekly + monthly fields (for loading old data without them)
 function ensureWeeklyFields(){
   if(!S.weeklyHabits)S.weeklyHabits=[];
   if(!S.weeklyChecks)S.weeklyChecks={};
+  if(!S.monthlyHabits)S.monthlyHabits=[];
+  if(!S.monthlyChecks)S.monthlyChecks={};
 }
 
 function sched(){
@@ -359,6 +415,51 @@ function toggleWeekly(w,whid){
   S.weeklyChecks[k]=!S.weeklyChecks[k];
   sched();
   renderWeeklyPanel();
+}
+
+// Monthly habit check key (keyed by period number, not week)
+function mhCk(period,mhid){return`m${period}_${mhid}`;}
+function isMhCk(period,mhid){return!!S.monthlyChecks[mhCk(period,mhid)];}
+
+function toggleMonthly(period,mhid){
+  const k=mhCk(period,mhid);
+  S.monthlyChecks[k]=!S.monthlyChecks[k];
+  sched();
+  renderMonthlyPanel();
+}
+
+// Highest period reached so far, based on current week
+function currentPeriod(){return weekToPeriod(S.currentWeek);}
+
+// Monthly habits score for a given period
+function mhPeriodScore(period){
+  if(!S.monthlyHabits||!S.monthlyHabits.length)return null;
+  let done=0;
+  S.monthlyHabits.forEach(mh=>{if(isMhCk(period,mh.id))done++;});
+  return Math.round(done/S.monthlyHabits.length*100);
+}
+
+// Monthly habit overall score (average across periods reached)
+function mhOverallScore(mhid){
+  const scores=[];
+  const cp=currentPeriod();
+  for(let p=1;p<=MONTH_PERIODS.length;p++){
+    if(p<=cp)scores.push(isMhCk(p,mhid)?100:0);
+  }
+  if(!scores.length)return null;
+  return Math.round(scores.reduce((a,b)=>a+b,0)/scores.length);
+}
+
+// Overall monthly score across periods reached
+function mhSeasonScore(){
+  if(!S.monthlyHabits||!S.monthlyHabits.length)return null;
+  const scores=[];
+  const cp=currentPeriod();
+  for(let p=1;p<=MONTH_PERIODS.length;p++){
+    if(p<=cp){const s=mhPeriodScore(p);if(s!==null)scores.push(s);}
+  }
+  if(!scores.length)return null;
+  return Math.round(scores.reduce((a,b)=>a+b,0)/scores.length);
 }
 
 function wkScore(w){
@@ -450,7 +551,7 @@ function renderTabs(){
     const b=document.createElement('button');
     b.className=`wk-tab${act?' active':''}${hd&&!act?' has':''}`;
     b.textContent=hd&&!act?`W${w} ${s}%`:`W${w}`;
-    b.onclick=()=>{S.currentWeek=w;saveLocal();renderTabs();renderWeekDateBar();renderRows();renderReview();renderMetrics();renderWeeklyPanel();};
+    b.onclick=()=>{S.currentWeek=w;saveLocal();renderTabs();renderWeekDateBar();renderRows();renderReview();renderMetrics();renderWeeklyPanel();renderMonthlyPanel();};
     c.appendChild(b);
   }
 }
@@ -487,6 +588,18 @@ function moveWeeklyHabit(whid,dir){
   S.weeklyHabits[idx]=S.weeklyHabits[newIdx];
   S.weeklyHabits[newIdx]=tmp;
   sched();renderWeeklyPanel();
+}
+
+// Monthly habit reorder
+function moveMonthlyHabit(mhid,dir){
+  const idx=S.monthlyHabits.findIndex(h=>h.id===mhid);
+  if(idx<0)return;
+  const newIdx=idx+dir;
+  if(newIdx<0||newIdx>=S.monthlyHabits.length)return;
+  const tmp=S.monthlyHabits[idx];
+  S.monthlyHabits[idx]=S.monthlyHabits[newIdx];
+  S.monthlyHabits[newIdx]=tmp;
+  sched();renderMonthlyPanel();
 }
 
 function renderRows(){
@@ -592,6 +705,20 @@ function renderWeeklyHistory(){
       <div class="wh-hist-bar-bg"><div class="wh-hist-bar-fill" style="width:${barW}%;background:${col};"></div></div>`;
     hist.appendChild(row);
   }
+
+  // Overall (season) row below W13
+  const seasonSc=whSeasonScore();
+  const oHasPct=seasonSc!==null&&seasonSc>0;
+  const oBarW=oHasPct?Math.round(seasonSc/100*100):0;
+  const oCol=scCol(seasonSc);
+  const oRow=document.createElement('div');
+  oRow.className='wh-hist-row';
+  oRow.style.cssText='margin-top:5px;padding-top:6px;border-top:0.5px solid var(--border);';
+  oRow.innerHTML=`
+    <div class="wh-hist-wk" style="font-weight:600;color:var(--text2);">All</div>
+    <div class="wh-hist-pct" style="font-weight:700;">${oHasPct?seasonSc+'%':'—'}</div>
+    <div class="wh-hist-bar-bg"><div class="wh-hist-bar-fill" style="width:${oBarW}%;background:${oCol};"></div></div>`;
+  hist.appendChild(oRow);
 }
 
 // Weekly habit management
@@ -618,19 +745,126 @@ function delWeeklyHabit(whid){
   sched();renderWeeklyPanel();
 }
 
-function renderReview(){
-  const w=S.currentWeek,pct=wkScore(w);
-  document.getElementById('rev-wk').textContent=w;
-  const n=document.getElementById('rev-num'),bar=document.getElementById('rev-bar'),v=document.getElementById('rev-verdict');
-  if(!pct){n.textContent='—';n.className='rev-num n';bar.style.width='0%';v.textContent='';}
-  else{
-    n.textContent=pct+'%';
-    n.className='rev-num'+(pct>=80?'':pct>=50?' a':' r');
-    bar.style.width=pct+'%';
-    bar.style.background=pct>=80?'var(--green)':pct>=50?'var(--amber)':'var(--red)';
-    v.textContent=pct>=80?'On track — great work':'Below 80% — consider adjusting habits';
-    v.style.color=pct>=80?'var(--green)':'var(--amber)';
+// ===== Monthly Habits Panel rendering =====
+function renderMonthlyPanel(){
+  ensureWeeklyFields();
+  const period=currentPeriod();
+  const monthName=periodMonthName(period);
+  const body=document.getElementById('monthly-grid-body');
+  const scoreRow=document.getElementById('monthly-score-row');
+  const hdr=document.getElementById('monthly-thisperiod-hdr');
+  if(hdr)hdr.textContent=monthName;
+  body.innerHTML='';
+
+  if(!S.monthlyHabits.length){
+    body.innerHTML='<div style="padding:12px 8px;font-size:12px;color:var(--text3);">No monthly habits yet. Click + Add monthly habit to get started.</div>';
+    scoreRow.innerHTML='';
+    renderMonthlyHistory();
+    return;
   }
+
+  S.monthlyHabits.forEach((mh,idx)=>{
+    const checked=isMhCk(period,mh.id);
+    const overall=mhOverallScore(mh.id);
+    const upBtn=idx>0?`<button class="move-btn" onclick="moveMonthlyHabit('${mh.id}',-1)" title="Move up">▲</button>`:'<span style="display:inline-block;width:14px;"></span>';
+    const dnBtn=idx<S.monthlyHabits.length-1?`<button class="move-btn" onclick="moveMonthlyHabit('${mh.id}',1)" title="Move down">▼</button>`:'<span style="display:inline-block;width:14px;"></span>';
+    const row=document.createElement('div');
+    row.style.cssText='display:grid;grid-template-columns:1fr auto auto auto;border-bottom:0.5px solid #f5f3ef;';
+    row.innerHTML=`
+      <div class="wh-cell">
+        <input class="wh-name-inp" value="${mh.name}" onchange="rnMonthlyHabit('${mh.id}',this.value)" title="Click to rename" />
+      </div>
+      <div class="wh-cell wh-cell-center" style="min-width:70px;">
+        <div class="chk${checked?' on':''}" onclick="toggleMonthly(${period},'${mh.id}')"></div>
+      </div>
+      <div class="wh-cell wh-cell-center" style="min-width:70px;">
+        <span class="spill ${scCls(overall!==null&&overall>0?overall:null)}">${overall!==null&&overall>0?overall+'%':'—'}</span>
+      </div>
+      <div class="wh-cell wh-cell-center" style="white-space:nowrap;">
+        ${upBtn}${dnBtn}<button class="del-btn" onclick="delMonthlyHabit('${mh.id}')" title="Remove">✕</button>
+      </div>`;
+    body.appendChild(row);
+  });
+
+  const thisPeriodScore=mhPeriodScore(period);
+  const seasonSc=mhSeasonScore();
+  scoreRow.innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr auto auto auto;background:var(--surface2);border-top:0.5px solid var(--border);padding:0;">
+      <div style="padding:8px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;">Score %</div>
+      <div style="padding:8px;min-width:70px;text-align:center;">
+        <span class="spill ${scCls(thisPeriodScore)}">${thisPeriodScore!==null?thisPeriodScore+'%':'—'}</span>
+      </div>
+      <div style="padding:8px;min-width:70px;text-align:center;">
+        <span class="spill ${scCls(seasonSc)}">${seasonSc!==null?seasonSc+'%':'—'}</span>
+      </div>
+      <div style="padding:8px;min-width:70px;"></div>
+    </div>`;
+
+  renderMonthlyHistory();
+}
+
+function renderMonthlyHistory(){
+  const hist=document.getElementById('monthly-history');
+  hist.innerHTML='';
+  const cp=currentPeriod();
+  for(let p=1;p<=MONTH_PERIODS.length;p++){
+    const s=p<=cp?mhPeriodScore(p):null;
+    const isActive=p===cp;
+    const hasPct=s!==null&&s>0;
+    const barW=hasPct?Math.round(s/100*100):0;
+    const col=scCol(s);
+    const nm=periodMonthName(p);
+    const row=document.createElement('div');
+    row.className='wh-hist-row'+(isActive?' active':'');
+    row.innerHTML=`
+      <div class="wh-hist-wk" style="width:auto;min-width:60px;">${nm}</div>
+      <div class="wh-hist-pct"${isActive?' style="color:var(--green);"':''}>${hasPct?s+'%':'—'}</div>
+      <div class="wh-hist-bar-bg"><div class="wh-hist-bar-fill" style="width:${barW}%;background:${col};"></div></div>`;
+    hist.appendChild(row);
+  }
+
+  // Overall (season) row
+  const seasonSc=mhSeasonScore();
+  const oHasPct=seasonSc!==null&&seasonSc>0;
+  const oBarW=oHasPct?Math.round(seasonSc/100*100):0;
+  const oCol=scCol(seasonSc);
+  const oRow=document.createElement('div');
+  oRow.className='wh-hist-row';
+  oRow.style.cssText='margin-top:5px;padding-top:6px;border-top:0.5px solid var(--border);';
+  oRow.innerHTML=`
+    <div class="wh-hist-wk" style="width:auto;min-width:60px;font-weight:600;color:var(--text2);">All</div>
+    <div class="wh-hist-pct" style="font-weight:700;">${oHasPct?seasonSc+'%':'—'}</div>
+    <div class="wh-hist-bar-bg"><div class="wh-hist-bar-fill" style="width:${oBarW}%;background:${oCol};"></div></div>`;
+  hist.appendChild(oRow);
+}
+
+// Monthly habit management
+function showAddMonthlyHabit(){
+  ensureWeeklyFields();
+  if(S.monthlyHabits.length>=MAX_MONTHLY){alert('Maximum '+MAX_MONTHLY+' monthly habits allowed.');return;}
+  document.getElementById('new-monthly-name').value='';
+  document.getElementById('add-monthly-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('new-monthly-name').focus(),100);
+}
+function closeMonthlyModal(){document.getElementById('add-monthly-modal').classList.remove('open');}
+function confirmAddMonthly(){
+  const name=document.getElementById('new-monthly-name').value.trim();
+  if(!name)return;
+  ensureWeeklyFields();
+  S.monthlyHabits.push({id:'mh'+Date.now(),name});
+  sched();closeMonthlyModal();renderMonthlyPanel();
+}
+function rnMonthlyHabit(mhid,v){const mh=S.monthlyHabits.find(x=>x.id===mhid);if(mh){mh.name=v;sched();}}
+function delMonthlyHabit(mhid){
+  if(!confirm('Remove this monthly habit? All its tick data will be deleted.'))return;
+  S.monthlyHabits=S.monthlyHabits.filter(x=>x.id!==mhid);
+  Object.keys(S.monthlyChecks).filter(k=>k.includes(`_${mhid}`)).forEach(k=>delete S.monthlyChecks[k]);
+  sched();renderMonthlyPanel();
+}
+
+function renderReview(){
+  const w=S.currentWeek;
+  document.getElementById('rev-wk').textContent=w;
   const rev=S.reviews[w]||{};
   document.getElementById('r-well').value=rev.well||'';
   document.getElementById('r-improve').value=rev.improve||'';
@@ -717,7 +951,7 @@ function render(){
   if(snapped!==S.startDate){S.startDate=snapped;}
   ensureWeeklyFields();
   document.getElementById('season-name').value=S.seasonName||'';
-  renderDateRange();renderGoals();renderTabs();renderWeekDateBar();renderRows();renderReview();renderMetrics();renderBars();renderWeeklyPanel();
+  renderDateRange();renderGoals();renderTabs();renderWeekDateBar();renderRows();renderReview();renderMetrics();renderBars();renderWeeklyPanel();renderMonthlyPanel();
 }
 
 function showAddHabit(){
@@ -764,9 +998,9 @@ function startNewSeason(){
   const msg='Start new season?\n\n'+
     'This will:\n'+
     '  • The current season CSV has just been downloaded\n'+
-    '  • Clear all daily ticks and weekly ticks\n'+
+    '  • Clear all daily ticks, weekly ticks and monthly ticks\n'+
     '  • Clear all weekly reviews\n'+
-    '  • Keep all goals, daily habits, and weekly habits\n'+
+    '  • Keep all goals, daily habits, weekly habits and monthly habits\n'+
     '  • Reset to Week 1 with today as the start date\n\n'+
     'The current season data is preserved in the CSV just downloaded.\n\n'+
     'Continue?';
@@ -787,6 +1021,7 @@ function startNewSeason(){
   // Step 4: Clear data, keep definitions
   S.checks={};
   S.weeklyChecks={};
+  S.monthlyChecks={};
   S.reviews={};
   S.currentWeek=1;
   S.startDate=nearestMonday(today.toISOString().slice(0,10));
@@ -856,6 +1091,29 @@ function exportCSV(){
       rows.push([wh.name,sc!==null?sc+'%':'']);
     });
   }
+
+  // Monthly habits section
+  if(S.monthlyHabits&&S.monthlyHabits.length>0){
+    rows.push(['','','','','','','','','','','','','','']);
+    rows.push(['MONTHLY HABITS','','','','','','','','','','','','','']);
+    const mhHeaders=['Period','Month','Weeks',...S.monthlyHabits.map(mh=>mh.name),'Score %'];
+    rows.push(mhHeaders);
+    for(let p=1;p<=MONTH_PERIODS.length;p++){
+      const [sw,ew]=MONTH_PERIODS[p-1];
+      const nm=periodMonthName(p);
+      const ticks=S.monthlyHabits.map(mh=>isMhCk(p,mh.id)?1:0);
+      const sc=mhPeriodScore(p);
+      rows.push([p,nm,`W${sw}-W${ew}`,...ticks,sc!==null?sc+'%':'']);
+    }
+
+    rows.push(['','','','','','','','','','','','','','']);
+    rows.push(['MONTHLY HABITS OVERALL','','','','','','','','','','','','','']);
+    rows.push(['Habit','Overall %']);
+    S.monthlyHabits.forEach(mh=>{
+      const sc=mhOverallScore(mh.id);
+      rows.push([mh.name,sc!==null?sc+'%':'']);
+    });
+  }
   
   const csv=rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
   const seasonSlug=(S.seasonName||'habits').replace(/\s+/g,'_');
@@ -915,8 +1173,7 @@ function onGapiLoad(){
 
 function signIn(){
   if(!gisLoaded||!tokenClient){alert('Google sign-in is still initialising. Please wait a moment and try again.');return;}
-  const isReturning=localStorage.getItem('ht_autoconnect')==='1';
-  tokenClient.requestAccessToken({prompt: isReturning ? '' : 'select_account'});
+  tokenClient.requestAccessToken({prompt: ''});
 }
 
 function signOut(){
@@ -1084,6 +1341,16 @@ async function saveDrive(){
   }
 }
 
+let toastT=null;
+function showToast(msg,ms){
+  const t=document.getElementById('toast');
+  if(!t)return;
+  t.textContent=msg;
+  t.classList.add('show');
+  if(toastT)clearTimeout(toastT);
+  toastT=setTimeout(()=>{t.classList.remove('show');},ms||3500);
+}
+
 async function manualSaveDrive(){
   if(!accessToken){alert('Not connected to Google Drive. Please connect first.');return;}
   const saveBtn=document.getElementById('save-all-btn');
@@ -1103,12 +1370,14 @@ async function manualSaveDrive(){
     const checkCount=Object.keys(S.checks).length;
     const weeklyCount=S.weeklyHabits?S.weeklyHabits.length:0;
     const weeklyCheckCount=S.weeklyChecks?Object.keys(S.weeklyChecks).length:0;
+    const monthlyCount=S.monthlyHabits?S.monthlyHabits.length:0;
+    const monthlyCheckCount=S.monthlyChecks?Object.keys(S.monthlyChecks).length:0;
     const timeStr=S.lastModified?formatTime(S.lastModified):'just now';
     
-    const confirmMsg=`✓ Saved successfully!\n\n${habitCount} daily habits, ${checkCount} daily checks\n${weeklyCount} weekly habits, ${weeklyCheckCount} weekly checks\nLast saved: ${timeStr}`;
+    const confirmMsg=`✓ Saved — ${habitCount} daily, ${weeklyCount} weekly, ${monthlyCount} monthly habits\n${checkCount} daily checks · ${weeklyCheckCount} weekly · ${monthlyCheckCount} monthly`;
     
     saveBtn.textContent='Saved!';
-    alert(confirmMsg);
+    showToast(confirmMsg);
     
     setTimeout(()=>{
       saveBtn.textContent='Save All to Drive';
