@@ -8,11 +8,16 @@
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --green: #1d9e75; --green-dark: #0f6e56; --green-light: #e1f5ee;
-    --amber: #a64d79; --amber-light: #f8e1ee;
-    --red: #8e7cc3; --red-light: #eee8f7;
-    --bg: #f5f3ef; --surface: #ffffff; --surface2: #f8f7f4;
-    --border: #e0ddd6; --border2: #ccc9c0;
+    --green: #7d8795; --green-dark: #5d6572; --green-light: #e9edf2;
+    --amber: #b8860b; --amber-light: #f7ecd0;
+    --red: #c0392b; --red-light: #fdf0ed;
+    --base: #cbc7bc; --base-chip: #eeeadf; --base-text: #8a877f;
+    --tier1: #d99b16; --tier1-chip: #f7ecd0; --tier1-text: #8f6608;
+    --tier2: #e06430; --tier2-chip: #fbe3d6; --tier2-text: #a8451c;
+    --flame: #d63a60; --flame-chip: #fbdde5; --flame-text: #a92747;
+    --glow-row: #fdeef2;
+    --bg: #faf6ee; --surface: #ffffff; --surface2: #f6f2e8;
+    --border: #e2ddd2; --border2: #d0cabb;
     --text: #1e1d1b; --text2: #6b6860; --text3: #a8a69f;
     --radius: 12px; --radius-sm: 8px;
   }
@@ -29,12 +34,13 @@
   @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.3} }
   .btn-sm { padding: 5px 12px; border-radius: 6px; border: 0.5px solid var(--border2); background: var(--surface); font-family: inherit; font-size: 12px; color: var(--text2); cursor: pointer; transition: background 0.15s; white-space: nowrap; }
   .btn-sm:hover { background: var(--surface2); }
-  .btn-sm.go { background: var(--green); border-color: var(--green); color: #fff; }
-  .btn-sm.go:hover { background: var(--green-dark); }
+  .btn-sm.go { background: #5b6abf; border-color: #5b6abf; color: #fff; }
+  .btn-sm.go:hover { background: #4a57a0; }
   .top-row { display: grid; grid-template-columns: 290px 1fr; gap: 14px; margin-bottom: 1.5rem; }
   @media(max-width:660px){ .top-row { grid-template-columns: 1fr; } }
   .card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 1.1rem 1.25rem; }
-  .card-lbl { font-size: 10px; font-weight: 600; letter-spacing: 0.07em; color: var(--text3); text-transform: uppercase; margin-bottom: 10px; }
+  .card-lbl { font-size: 11px; font-weight: 700; letter-spacing: 0.07em; color: var(--flame); text-transform: uppercase; margin-bottom: 10px; }
+  .card-lbl.sub { font-size: 10px; font-weight: 600; color: var(--text3); }
   .goal-item { margin-bottom: 4px; }
   .goal-hdr { display: flex; align-items: center; gap: 6px; cursor: pointer; padding: 4px 0; }
   .goal-arrow { font-size: 9px; color: var(--text3); transition: transform 0.18s; flex-shrink: 0; user-select: none; line-height: 1; }
@@ -49,7 +55,7 @@
   .metrics-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 14px; }
   .metric { text-align: center; }
   .metric-val { font-size: 26px; font-weight: 300; color: var(--text); line-height: 1; }
-  .metric-val.good { color: var(--green); }
+  .metric-val.good { color: var(--flame); }
   .metric-val.bold { font-weight: 500; }
   .metric-lbl { font-size: 10px; color: var(--text3); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.05em; }
   .unsaved-indicator { font-size: 11px; color: var(--amber); margin-left: 8px; display: none; }
@@ -69,11 +75,11 @@
   .tracker-wrap { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 1rem; overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; min-width: 560px; }
   thead th { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; background: var(--surface2); padding: 8px 6px; text-align: center; border-bottom: 0.5px solid var(--border); }
-  thead th.hcol { text-align: left; padding-left: 14px; min-width: 170px; }
-  tbody td { padding: 6px; text-align: center; border-bottom: 0.5px solid #f5f3ef; vertical-align: middle; }
+  thead th.hcol { text-align: left; padding-left: 14px; min-width: 170px; color: var(--flame); font-weight: 700; font-size: 11px; }
+  tbody td { padding: 6px; text-align: center; border-bottom: 0.5px solid #f5f0e5; vertical-align: middle; }
   tbody td.hcell { text-align: left; padding-left: 14px; }
   tbody tr:last-child td { border-bottom: none; }
-  tbody tr:hover td { background: #fafaf8; }
+  tbody tr:hover td { background: #faf7f0; }
   .hab-inp { border: none; outline: none; font-family: inherit; font-size: 13px; color: var(--text); background: transparent; width: 100%; }
   .hab-inp:focus { color: var(--green); }
   .goal-tag { font-size: 9px; color: var(--text3); display: block; margin-top: 1px; }
@@ -88,9 +94,23 @@
   .chk.on { background: var(--green); border-color: var(--green); }
   .chk.on::after { content:''; display:block; width:5px; height:9px; border:2px solid #fff; border-top:none; border-left:none; transform:rotate(45deg) translate(-1px,-1px); }
   .spill { font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 10px; display: inline-block; white-space: nowrap; }
-  .sp-g { background: var(--green-light); color: var(--green-dark); }
-  .sp-a { background: var(--amber-light); color: var(--amber); }
-  .sp-r { background: var(--red-light); color: var(--red); }
+  .sp-t3 { background: var(--flame-chip); color: var(--flame-text); }
+  .sp-t2 { background: var(--tier2-chip); color: var(--tier2-text); }
+  .sp-t1 { background: var(--tier1-chip); color: var(--tier1-text); }
+  .sp-t0 { background: var(--base-chip); color: var(--base-text); }
+  .score-circle { width: 36px; height: 36px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; letter-spacing: -0.02em; }
+  .score-circle.big100 { font-size: 9.5px; }
+  .score-circle.ring { box-shadow: 0 0 0 3px var(--flame-chip); }
+  .metric-circle { width: 44px; height: 44px; font-size: 13px; }
+  .sc-t3 { background: var(--flame); }
+  .sc-t2 { background: var(--tier2); }
+  .sc-t1 { background: var(--tier1); }
+  .sc-t0 { background: var(--base-chip); color: var(--text); }
+  .sc-n { background: var(--surface2); color: var(--text3); }
+  .chk.on.flame { background: var(--flame); border-color: var(--flame); }
+  tbody tr.perfect td { background: var(--glow-row); }
+  tbody tr.perfect:hover td { background: var(--glow-row); }
+  thead th.day-hot { background: var(--flame); color: #fff; box-shadow: 0 0 8px rgba(214,58,96,0.55); }
   .sp-n { background: var(--surface2); color: var(--text3); }
   tfoot td { padding: 8px 14px; }
   .add-btn { font-size: 12px; color: var(--green); cursor: pointer; background: none; border: none; font-family: inherit; display: inline-flex; align-items: center; gap: 5px; }
@@ -112,14 +132,8 @@
   .rev-field textarea { width: 100%; border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 7px 9px; font-family: inherit; font-size: 12px; color: var(--text); resize: none; min-height: 58px; outline: none; background: var(--surface2); line-height: 1.5; }
   .rev-field textarea:focus { border-color: var(--green); background: #fff; }
   .bot-row { display: flex; gap: 8px; flex-wrap: wrap; }
-  .btn { padding: 8px 16px; border-radius: var(--radius-sm); border: 0.5px solid var(--border2); background: var(--surface); font-family: inherit; font-size: 12px; color: var(--text2); cursor: pointer; transition: background 0.15s; }
-  .btn:hover { background: var(--surface2); }
-  .btn.pri { background: var(--green); border-color: var(--green); color: #fff; font-weight: 500; }
-  .btn.pri:hover { background: var(--green-dark); }
-  .btn.dan { color: #c0392b; border-color: #f5c4b3; }
-  .btn.dan:hover { background: #fdf0ed; }
-  .btn.season { background: #5b6abf; border-color: #5b6abf; color: #fff; font-weight: 500; }
-  .btn.season:hover { background: #4a57a0; }
+  .btn { padding: 8px 16px; border-radius: var(--radius-sm); border: 0.5px solid #5b6abf; background: #5b6abf; font-family: inherit; font-size: 12px; color: #fff; font-weight: 500; cursor: pointer; transition: background 0.15s; }
+  .btn:hover { background: #4a57a0; }
   .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 100; align-items: center; justify-content: center; }
   .modal-bg.open { display: flex; }
   .modal { background: var(--surface); border-radius: var(--radius); padding: 1.5rem; max-width: 400px; width: 92%; }
@@ -133,7 +147,7 @@
   .weekly-panel { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1rem; }
   .weekly-grid { display: grid; grid-template-columns: 1fr auto auto; gap: 0; }
   .wh-header { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; padding: 6px 8px; background: var(--surface2); border-bottom: 0.5px solid var(--border); }
-  .wh-cell { padding: 7px 8px; border-bottom: 0.5px solid #f5f3ef; display: flex; align-items: center; }
+  .wh-cell { padding: 7px 8px; border-bottom: 0.5px solid #f5f0e5; display: flex; align-items: center; }
   .wh-cell-center { justify-content: center; }
   .wh-name-inp { border: none; outline: none; font-family: inherit; font-size: 13px; color: var(--text); background: transparent; width: 100%; }
   .wh-name-inp:focus { color: var(--green); }
@@ -141,14 +155,14 @@
   .weekly-right { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 1rem 1.25rem; }
   .wh-hist-row { display: flex; align-items: center; gap: 8px; padding: 2px 0; font-size: 11px; }
   .wh-hist-wk { width: 28px; color: var(--text3); font-weight: 500; text-align: right; flex-shrink: 0; }
-  .wh-hist-pct { width: 34px; font-weight: 600; text-align: right; flex-shrink: 0; }
+  .wh-hist-pct { width: 34px; font-weight: 600; text-align: right; flex-shrink: 0; color: var(--text3); }
   .wh-hist-bar-bg { flex: 1; height: 10px; background: var(--surface2); border: 0.5px solid var(--border); border-radius: 2px; overflow: hidden; }
   .wh-hist-bar-fill { height: 100%; border-radius: 2px; transition: width 0.35s ease; }
-  .wh-hist-row.active .wh-hist-pct { color: var(--green); }
-  .wh-hist-row.active .wh-hist-wk { color: var(--green); font-weight: 600; }
+  .wh-hist-row.active .wh-hist-pct { color: var(--text2); }
+  .wh-hist-row.active .wh-hist-wk { color: var(--text2); font-weight: 600; }
 
   /* Auto-fade toast (save success) */
-  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(10px); background: var(--green); color: #fff; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; padding: 12px 20px; border-radius: var(--radius-sm); box-shadow: 0 4px 16px rgba(0,0,0,0.18); z-index: 200; opacity: 0; pointer-events: none; transition: opacity 0.4s ease, transform 0.4s ease; max-width: 90%; white-space: pre-line; text-align: center; line-height: 1.5; }
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(10px); background: var(--green-dark); color: #fff; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; padding: 12px 20px; border-radius: var(--radius-sm); box-shadow: 0 4px 16px rgba(0,0,0,0.18); z-index: 200; opacity: 0; pointer-events: none; transition: opacity 0.4s ease, transform 0.4s ease; max-width: 90%; white-space: pre-line; text-align: center; line-height: 1.5; }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 </style>
 </head>
@@ -157,7 +171,7 @@
   <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:4px;">
     <div class="page-title">Seasonal Habit Tracker</div>
     <input id="season-name" placeholder="e.g. Autumn 2026" value=""
-      style="font-family:'DM Serif Display',serif;font-size:20px;font-weight:400;color:var(--green);background:transparent;border:none;border-bottom:1.5px solid var(--border);outline:none;padding:2px 4px;min-width:160px;max-width:220px;"
+      style="font-family:'DM Serif Display',serif;font-size:20px;font-weight:400;color:var(--flame);background:transparent;border:none;border-bottom:1.5px solid var(--border);outline:none;padding:2px 4px;min-width:160px;max-width:220px;"
       onchange="saveSeason(this.value)" title="Click to edit season name" />
   </div>
   <div class="page-sub" id="date-range"></div>
@@ -196,7 +210,7 @@
     <table>
       <thead><tr>
         <th class="hcol">Daily Habits</th>
-        <th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th>
+        <th id="day-th-0">Mon</th><th id="day-th-1">Tue</th><th id="day-th-2">Wed</th><th id="day-th-3">Thu</th><th id="day-th-4">Fri</th><th id="day-th-5">Sat</th><th id="day-th-6">Sun</th>
         <th>Week</th><th>Overall</th><th></th>
       </tr></thead>
       <tbody id="habit-tbody"></tbody>
@@ -221,7 +235,7 @@
       </div>
     </div>
     <div class="weekly-right">
-      <div class="card-lbl">Weekly Habits History</div>
+      <div class="card-lbl sub">Weekly Habits History</div>
       <div id="weekly-history"></div>
     </div>
   </div>
@@ -230,6 +244,7 @@
   <div style="display:grid;grid-template-columns:1fr 280px;gap:14px;margin-bottom:1rem;">
     <div class="weekly-panel">
       <div class="card-lbl">Monthly Habits</div>
+      <div id="monthly-countdown" style="font-size:12px;color:var(--text2);font-weight:600;margin:-4px 0 8px;"></div>
       <div class="weekly-grid" id="monthly-grid" style="grid-template-columns:1fr auto auto auto;">
         <div class="wh-header">Habit</div>
         <div class="wh-header" style="text-align:center;min-width:70px;" id="monthly-thisperiod-hdr">This Month</div>
@@ -243,7 +258,7 @@
       </div>
     </div>
     <div class="weekly-right">
-      <div class="card-lbl">Monthly Habits History</div>
+      <div class="card-lbl sub">Monthly Habits History</div>
       <div id="monthly-history"></div>
     </div>
   </div>
@@ -503,12 +518,27 @@ function whSeasonScore(){
 
 function scCls(p){
   if(p===null||p===0)return'sp-n';
-  return p>=80?'sp-g':p>=50?'sp-a':'sp-r';
+  return p>=80?'sp-t3':p>=65?'sp-t2':p>=50?'sp-t1':'sp-t0';
+}
+
+function scCircCls(p){
+  if(p===null||p===0)return'sc-n';
+  return p>=80?'sc-t3':p>=65?'sc-t2':p>=50?'sc-t1':'sc-t0';
+}
+
+function tierSolid(p){
+  if(p===null||p===0)return null;
+  return p>=80?['var(--flame)','#fff']:p>=65?['var(--tier2)','#fff']:p>=50?['var(--tier1)','#fff']:['var(--base-chip)','var(--text)'];
+}
+
+function tierChip(p){
+  if(p===null||p===0)return null;
+  return p>=80?['var(--flame-chip)','var(--flame-text)']:p>=65?['var(--tier2-chip)','var(--tier2-text)']:p>=50?['var(--tier1-chip)','var(--tier1-text)']:['var(--base-chip)','var(--base-text)'];
 }
 
 function scCol(p){
   if(p===null||p===0)return'transparent';
-  return p>=80?'var(--green)':p>=50?'var(--amber)':'var(--red)';
+  return p>=80?'var(--flame)':p>=65?'var(--tier2)':p>=50?'var(--tier1)':'var(--base)';
 }
 
 function goalOverallScore(goalId){
@@ -525,7 +555,7 @@ function renderGoals(){
   S.goals.forEach(g=>{
     const habs=S.habits.filter(h=>h.goalId===g.id);
     const goalScore=goalOverallScore(g.id);
-    const scoreHtml=goalScore!==null?`<span class="goal-score ${scCls(goalScore)}">${goalScore}%</span>`:'';
+    const scoreHtml=goalScore!==null?`<span class="score-circle ${scCircCls(goalScore)}${goalScore===100?' big100':''}" style="flex-shrink:0;margin-left:8px;">${goalScore}%</span>`:'';
     const d=document.createElement('div');
     d.className='goal-item';
     d.innerHTML=`
@@ -550,7 +580,8 @@ function renderTabs(){
     const s=wkScore(w),act=w===S.currentWeek,hd=s!==null&&s>0;
     const b=document.createElement('button');
     b.className=`wk-tab${act?' active':''}${hd&&!act?' has':''}`;
-    b.textContent=hd&&!act?`W${w} ${s}%`:`W${w}`;
+    b.textContent=hd?`W${w} ${s}%`:`W${w}`;
+    if(hd&&!act){const t=tierSolid(s);if(t){b.style.background=t[0];b.style.color=t[1];b.style.borderColor='transparent';b.style.fontWeight='600';}}
     b.onclick=()=>{S.currentWeek=w;saveLocal();renderTabs();renderWeekDateBar();renderRows();renderReview();renderMetrics();renderWeeklyPanel();renderMonthlyPanel();};
     c.appendChild(b);
   }
@@ -605,6 +636,8 @@ function moveMonthlyHabit(mhid,dir){
 function renderRows(){
   const w=S.currentWeek,tb=document.getElementById('habit-tbody');
   tb.innerHTML='';
+  const dayFull=DAYS.map((_,di)=>S.habits.length>0&&S.habits.every(h=>isCk(w,h.id,di)));
+  DAYS.forEach((_,di)=>{const th=document.getElementById('day-th-'+di);if(th)th.classList.toggle('day-hot',dayFull[di]);});
   S.habits.forEach((h,idx)=>{
     const done=DAYS.filter((_,di)=>isCk(w,h.id,di)).length;
     const pct=Math.round(done/7*100);
@@ -613,14 +646,15 @@ function renderRows(){
     const upBtn=idx>0?`<button class="move-btn" onclick="moveHabit('${h.id}',-1)" title="Move up">▲</button>`:'<span style="display:inline-block;width:14px;"></span>';
     const dnBtn=idx<S.habits.length-1?`<button class="move-btn" onclick="moveHabit('${h.id}',1)" title="Move down">▼</button>`:'<span style="display:inline-block;width:14px;"></span>';
     const tr=document.createElement('tr');
+    if(done===7)tr.className='perfect';
     tr.innerHTML=`
       <td class="hcell">
         <input class="hab-inp" value="${h.name}" onchange="rnHab('${h.id}',this.value)" title="Click to rename" />
         <select class="goal-sel" onchange="reassignHabit('${h.id}',this.value)" title="Change goal">${goalOpts}</select>
       </td>
-      ${DAYS.map((_,di)=>`<td><div class="chk${isCk(w,h.id,di)?' on':''}" onclick="toggle(${w},'${h.id}',${di})"></div></td>`).join('')}
-      <td><span class="spill ${scCls(done>0?pct:null)}">${done>0?pct+'%':'—'}</span></td>
-      <td><span class="spill ${scCls(overall!==null&&overall>0?overall:null)}">${overall!==null&&overall>0?overall+'%':'—'}</span></td>
+      ${DAYS.map((_,di)=>`<td><div class="chk${isCk(w,h.id,di)?(done===7||dayFull[di]?' on flame':' on'):''}" onclick="toggle(${w},'${h.id}',${di})"></div></td>`).join('')}
+      <td><span class="score-circle ${scCircCls(done>0?pct:null)}${pct===100?' big100 ring':''}">${done>0?pct+'%':'—'}</span></td>
+      <td><span class="score-circle ${scCircCls(overall!==null&&overall>0?overall:null)}${overall===100?' big100':''}">${overall!==null&&overall>0?overall+'%':'—'}</span></td>
       <td style="white-space:nowrap;">${upBtn}${dnBtn}<button class="del-btn" onclick="delHabit('${h.id}')" title="Remove habit">✕</button></td>`;
     tb.appendChild(tr);
   });
@@ -647,7 +681,7 @@ function renderWeeklyPanel(){
     const upBtn=idx>0?`<button class="move-btn" onclick="moveWeeklyHabit('${wh.id}',-1)" title="Move up">▲</button>`:'<span style="display:inline-block;width:14px;"></span>';
     const dnBtn=idx<S.weeklyHabits.length-1?`<button class="move-btn" onclick="moveWeeklyHabit('${wh.id}',1)" title="Move down">▼</button>`:'<span style="display:inline-block;width:14px;"></span>';
     const row=document.createElement('div');
-    row.style.cssText='display:grid;grid-template-columns:1fr auto auto auto;border-bottom:0.5px solid #f5f3ef;';
+    row.style.cssText='display:grid;grid-template-columns:1fr auto auto auto;border-bottom:0.5px solid #f5f0e5;';
     row.innerHTML=`
       <div class="wh-cell">
         <input class="wh-name-inp" value="${wh.name}" onchange="rnWeeklyHabit('${wh.id}',this.value)" title="Click to rename" />
@@ -656,7 +690,7 @@ function renderWeeklyPanel(){
         <div class="chk${checked?' on':''}" onclick="toggleWeekly(${w},'${wh.id}')"></div>
       </div>
       <div class="wh-cell wh-cell-center" style="min-width:70px;">
-        <span class="spill ${scCls(overall!==null&&overall>0?overall:null)}">${overall!==null&&overall>0?overall+'%':'—'}</span>
+        <span class="score-circle ${scCircCls(overall!==null&&overall>0?overall:null)}${overall===100?' big100':''}">${overall!==null&&overall>0?overall+'%':'—'}</span>
       </div>
       <div class="wh-cell wh-cell-center" style="white-space:nowrap;">
         ${upBtn}${dnBtn}<button class="del-btn" onclick="delWeeklyHabit('${wh.id}')" title="Remove">✕</button>
@@ -671,10 +705,10 @@ function renderWeeklyPanel(){
     <div style="display:grid;grid-template-columns:1fr auto auto auto;background:var(--surface2);border-top:0.5px solid var(--border);padding:0;">
       <div style="padding:8px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;">Score %</div>
       <div style="padding:8px;min-width:70px;text-align:center;">
-        <span class="spill ${scCls(thisWkScore)}">${thisWkScore!==null?thisWkScore+'%':'—'}</span>
+        <span class="score-circle ${scCircCls(thisWkScore)}${thisWkScore===100?' big100':''}">${thisWkScore!==null?thisWkScore+'%':'—'}</span>
       </div>
       <div style="padding:8px;min-width:70px;text-align:center;">
-        <span class="spill ${scCls(seasonSc)}">${seasonSc!==null?seasonSc+'%':'—'}</span>
+        <span class="score-circle ${scCircCls(seasonSc)}${seasonSc===100?' big100':''}">${seasonSc!==null?seasonSc+'%':'—'}</span>
       </div>
       <div style="padding:8px;min-width:70px;"></div>
     </div>`;
@@ -701,7 +735,7 @@ function renderWeeklyHistory(){
     row.className='wh-hist-row'+(isActive?' active':'');
     row.innerHTML=`
       <div class="wh-hist-wk">W${w}</div>
-      <div class="wh-hist-pct"${isActive?' style="color:var(--green);"':''}>${hasPct?s+'%':'—'}</div>
+      <div class="wh-hist-pct">${hasPct?s+'%':'—'}</div>
       <div class="wh-hist-bar-bg"><div class="wh-hist-bar-fill" style="width:${barW}%;background:${col};"></div></div>`;
     hist.appendChild(row);
   }
@@ -715,7 +749,7 @@ function renderWeeklyHistory(){
   oRow.className='wh-hist-row';
   oRow.style.cssText='margin-top:5px;padding-top:6px;border-top:0.5px solid var(--border);';
   oRow.innerHTML=`
-    <div class="wh-hist-wk" style="font-weight:600;color:var(--text2);">All</div>
+    <div class="wh-hist-wk" style="font-weight:600;">All</div>
     <div class="wh-hist-pct" style="font-weight:700;">${oHasPct?seasonSc+'%':'—'}</div>
     <div class="wh-hist-bar-bg"><div class="wh-hist-bar-fill" style="width:${oBarW}%;background:${oCol};"></div></div>`;
   hist.appendChild(oRow);
@@ -750,6 +784,8 @@ function renderMonthlyPanel(){
   ensureWeeklyFields();
   const period=currentPeriod();
   const monthName=periodMonthName(period);
+  const cd=document.getElementById('monthly-countdown');
+  if(cd){const [sw,ew]=MONTH_PERIODS[period-1];cd.textContent=`${monthName} - week ${S.currentWeek-sw+1} of ${ew-sw+1}`;}
   const body=document.getElementById('monthly-grid-body');
   const scoreRow=document.getElementById('monthly-score-row');
   const hdr=document.getElementById('monthly-thisperiod-hdr');
@@ -769,7 +805,7 @@ function renderMonthlyPanel(){
     const upBtn=idx>0?`<button class="move-btn" onclick="moveMonthlyHabit('${mh.id}',-1)" title="Move up">▲</button>`:'<span style="display:inline-block;width:14px;"></span>';
     const dnBtn=idx<S.monthlyHabits.length-1?`<button class="move-btn" onclick="moveMonthlyHabit('${mh.id}',1)" title="Move down">▼</button>`:'<span style="display:inline-block;width:14px;"></span>';
     const row=document.createElement('div');
-    row.style.cssText='display:grid;grid-template-columns:1fr auto auto auto;border-bottom:0.5px solid #f5f3ef;';
+    row.style.cssText='display:grid;grid-template-columns:1fr auto auto auto;border-bottom:0.5px solid #f5f0e5;';
     row.innerHTML=`
       <div class="wh-cell">
         <input class="wh-name-inp" value="${mh.name}" onchange="rnMonthlyHabit('${mh.id}',this.value)" title="Click to rename" />
@@ -778,7 +814,7 @@ function renderMonthlyPanel(){
         <div class="chk${checked?' on':''}" onclick="toggleMonthly(${period},'${mh.id}')"></div>
       </div>
       <div class="wh-cell wh-cell-center" style="min-width:70px;">
-        <span class="spill ${scCls(overall!==null&&overall>0?overall:null)}">${overall!==null&&overall>0?overall+'%':'—'}</span>
+        <span class="score-circle ${scCircCls(overall!==null&&overall>0?overall:null)}${overall===100?' big100':''}">${overall!==null&&overall>0?overall+'%':'—'}</span>
       </div>
       <div class="wh-cell wh-cell-center" style="white-space:nowrap;">
         ${upBtn}${dnBtn}<button class="del-btn" onclick="delMonthlyHabit('${mh.id}')" title="Remove">✕</button>
@@ -792,10 +828,10 @@ function renderMonthlyPanel(){
     <div style="display:grid;grid-template-columns:1fr auto auto auto;background:var(--surface2);border-top:0.5px solid var(--border);padding:0;">
       <div style="padding:8px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;">Score %</div>
       <div style="padding:8px;min-width:70px;text-align:center;">
-        <span class="spill ${scCls(thisPeriodScore)}">${thisPeriodScore!==null?thisPeriodScore+'%':'—'}</span>
+        <span class="score-circle ${scCircCls(thisPeriodScore)}${thisPeriodScore===100?' big100':''}">${thisPeriodScore!==null?thisPeriodScore+'%':'—'}</span>
       </div>
       <div style="padding:8px;min-width:70px;text-align:center;">
-        <span class="spill ${scCls(seasonSc)}">${seasonSc!==null?seasonSc+'%':'—'}</span>
+        <span class="score-circle ${scCircCls(seasonSc)}${seasonSc===100?' big100':''}">${seasonSc!==null?seasonSc+'%':'—'}</span>
       </div>
       <div style="padding:8px;min-width:70px;"></div>
     </div>`;
@@ -818,7 +854,7 @@ function renderMonthlyHistory(){
     row.className='wh-hist-row'+(isActive?' active':'');
     row.innerHTML=`
       <div class="wh-hist-wk" style="width:auto;min-width:60px;">${nm}</div>
-      <div class="wh-hist-pct"${isActive?' style="color:var(--green);"':''}>${hasPct?s+'%':'—'}</div>
+      <div class="wh-hist-pct">${hasPct?s+'%':'—'}</div>
       <div class="wh-hist-bar-bg"><div class="wh-hist-bar-fill" style="width:${barW}%;background:${col};"></div></div>`;
     hist.appendChild(row);
   }
@@ -832,7 +868,7 @@ function renderMonthlyHistory(){
   oRow.className='wh-hist-row';
   oRow.style.cssText='margin-top:5px;padding-top:6px;border-top:0.5px solid var(--border);';
   oRow.innerHTML=`
-    <div class="wh-hist-wk" style="width:auto;min-width:60px;font-weight:600;color:var(--text2);">All</div>
+    <div class="wh-hist-wk" style="width:auto;min-width:60px;font-weight:600;">All</div>
     <div class="wh-hist-pct" style="font-weight:700;">${oHasPct?seasonSc+'%':'—'}</div>
     <div class="wh-hist-bar-bg"><div class="wh-hist-bar-fill" style="width:${oBarW}%;background:${oCol};"></div></div>`;
   hist.appendChild(oRow);
@@ -874,10 +910,10 @@ function renderMetrics(){
   const sc=[];for(let w=1;w<=WKS;w++){const s=wkScore(w);if(s!==null&&s>0)sc.push(s);}
   const tw=wkScore(S.currentWeek),best=sc.length?Math.max(...sc):null,avg=sc.length?Math.round(sc.reduce((a,b)=>a+b,0)/sc.length):null;
   document.getElementById('metrics-row').innerHTML=[
-    ['Overall',avg!==null?avg+'%':'—',avg>=80,false],
-    ['This week',tw&&tw>0?tw+'%':'—',tw>=80,true],
-    ['Best week',best!==null?best+'%':'—',best>=80,false]
-  ].map(([l,v,g,bold])=>`<div class="metric"><div class="metric-val${g?' good':''}${bold?' bold':''}">${v}</div><div class="metric-lbl">${l}</div></div>`).join('');
+    ['Overall',avg],
+    ['This week',tw&&tw>0?tw:null],
+    ['Best week',best]
+  ].map(([l,p])=>`<div class="metric"><span class="score-circle metric-circle ${scCircCls(p!==null&&p>0?p:null)}${p===100?' big100':''}">${p!==null&&p>0?p+'%':'—'}</span><div class="metric-lbl">${l}</div></div>`).join('');
 }
 
 function renderBars(){
@@ -886,7 +922,7 @@ function renderBars(){
   const mx=Math.max(...sc,1);
   sc.forEach((s,i)=>{
     const h=Math.round(s/mx*100);
-    const col=s>=80?'var(--green)':s>=50?'var(--amber)':s>0?'var(--red)':'transparent';
+    const col=s>0?scCol(s):'transparent';
     const d=document.createElement('div');d.className='mbar-wrap';d.title=`Week ${i+1}: ${s}%`;
     d.innerHTML=`<div class="mbar-bg"><div class="mbar-fill" style="height:${h}%;background:${col}"></div></div><div class="mbar-lbl">${i+1}</div>`;
     c.appendChild(d);
@@ -935,12 +971,18 @@ function renderWeekDateBar(){
 }
 
 function editStartDate(){
-  const current=S.startDate;
-  const input=prompt('Enter new start date (any date — it will snap to the nearest Monday):\nFormat: YYYY-MM-DD e.g. 2026-03-23',current);
-  if(!input)return;
-  const snapped=nearestMonday(input);
-  if(!snapped||isNaN(new Date(snapped).getTime())){alert('Invalid date — please use YYYY-MM-DD format.');return;}
-  S.startDate=snapped;
+  const el=document.getElementById('date-range');
+  const btnStyle='font-size:11px;font-family:inherit;cursor:pointer;border:0.5px solid var(--border2);border-radius:6px;padding:2px 8px;background:var(--surface);color:var(--text2);';
+  el.innerHTML=`<input type="date" id="start-date-inp" value="${S.startDate}" style="font-family:inherit;font-size:12px;padding:2px 6px;border:0.5px solid var(--border2);border-radius:6px;color:var(--text2);">
+    <span style="font-size:11px;color:var(--text3);">&nbsp;snaps to nearest Monday&nbsp;</span>
+    <button onclick="applyStartDate()" style="${btnStyle}background:#2563eb;color:#fff;border-color:#2563eb;">Apply</button>
+    <button onclick="renderDateRange()" style="${btnStyle}">Cancel</button>`;
+}
+
+function applyStartDate(){
+  const v=document.getElementById('start-date-inp').value;
+  if(!v){renderDateRange();return;}
+  S.startDate=nearestMonday(v);
   sched();render();
 }
 
