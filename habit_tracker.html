@@ -13,8 +13,8 @@
     --red: #c0392b; --red-light: #fdf0ed;
     --base: #cbc7bc; --base-chip: #eeeadf; --base-text: #8a877f;
     --tier1: #d99b16; --tier1-chip: #f7ecd0; --tier1-text: #8f6608;
-    --tier2: #e06430; --tier2-chip: #fbe3d6; --tier2-text: #a8451c;
-    --flame: #d63a60; --flame-chip: #fbdde5; --flame-text: #a92747;
+    --tier2: #e2751f; --tier2-chip: #fce7d2; --tier2-text: #b0530a;
+    --flame: #cc2f6e; --flame-chip: #fbdbe8; --flame-text: #a1235a;
     --glow-row: #fdeef2;
     --bg: #faf6ee; --surface: #ffffff; --surface2: #f6f2e8;
     --border: #e2ddd2; --border2: #d0cabb;
@@ -168,11 +168,19 @@
 </head>
 <body>
 <div class="app">
-  <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:4px;">
-    <div class="page-title">Seasonal Habit Tracker</div>
-    <input id="season-name" placeholder="e.g. Autumn 2026" value=""
-      style="font-family:'DM Serif Display',serif;font-size:20px;font-weight:400;color:var(--flame);background:transparent;border:none;border-bottom:1.5px solid var(--border);outline:none;padding:2px 4px;min-width:160px;max-width:220px;"
-      onchange="saveSeason(this.value)" title="Click to edit season name" />
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:4px;">
+    <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;">
+      <div class="page-title">Seasonal Habit Tracker</div>
+      <input id="season-name" placeholder="e.g. Autumn 2026" value=""
+        style="font-family:'DM Serif Display',serif;font-size:20px;font-weight:400;color:var(--flame);background:transparent;border:none;border-bottom:1.5px solid var(--border);outline:none;padding:2px 4px;min-width:160px;max-width:220px;"
+        onchange="saveSeason(this.value)" title="Click to edit season name" />
+    </div>
+    <div class="card" id="legend-box" onclick="openThemeSettings()" title="Click to change colours &amp; thresholds" style="padding:8px 16px;display:flex;flex-direction:column;gap:3px;font-size:10px;color:var(--text3);flex-shrink:0;cursor:pointer;">
+      <div><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--base-chip);margin-right:6px;"></span><span id="legend-pct-0">0–49%</span></div>
+      <div><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--tier1);margin-right:6px;"></span><span id="legend-pct-1">50–64%</span></div>
+      <div><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--tier2);margin-right:6px;"></span><span id="legend-pct-2">65–79%</span></div>
+      <div><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--flame);margin-right:6px;"></span><span id="legend-pct-3">80–100%</span></div>
+    </div>
   </div>
   <div class="page-sub" id="date-range"></div>
 
@@ -185,9 +193,16 @@
     <button class="btn-sm" id="save-all-btn" onclick="manualSaveDrive()" style="display:none">Save All to Drive</button>
   </div>
 
+  <div class="week-nav">
+    <span class="wk-lbl">Week</span>
+    <div id="week-tabs" style="display:flex;gap:5px;flex-wrap:wrap;"></div>
+  </div>
+
+  <div id="week-date-bar" style="font-size:13px;color:var(--text2);margin-bottom:10px;padding:0 2px;"></div>
+
   <div class="top-row">
     <div class="card">
-      <div class="card-lbl">Goals &amp; habits</div>
+      <div class="card-lbl">Goals &amp; habits for this season</div>
       <div id="goals-list"></div>
     </div>
     <div class="card metrics-card">
@@ -198,13 +213,6 @@
       </div>
     </div>
   </div>
-
-  <div class="week-nav">
-    <span class="wk-lbl">Week</span>
-    <div id="week-tabs" style="display:flex;gap:5px;flex-wrap:wrap;"></div>
-  </div>
-
-  <div id="week-date-bar" style="font-size:13px;color:var(--text2);margin-bottom:10px;padding:0 2px;"></div>
 
   <div class="tracker-wrap">
     <table>
@@ -306,6 +314,20 @@
 
 <div class="toast" id="toast"></div>
 
+<div class="modal-bg" id="theme-modal">
+  <div class="modal" style="max-width:460px;">
+    <h3>Colour &amp; threshold settings</h3>
+    <p>Pick a seasonal preset or customise your own colours. Thresholds set the score bands used throughout the tracker.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;" id="preset-swatches"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;" id="color-pickers"></div>
+    <div style="margin-bottom:6px;font-size:10px;font-weight:600;letter-spacing:0.06em;color:var(--text3);text-transform:uppercase;">Score thresholds (%)</div>
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;" id="threshold-inputs"></div>
+    <div class="modal-btns">
+      <button class="btn pri" onclick="closeThemeModal()">Done</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-bg" id="add-monthly-modal">
   <div class="modal">
     <h3>Add monthly habit</h3>
@@ -345,6 +367,7 @@ const DFILE='habit_tracker_data.json';
 const TRACKER_FOLDER='1jx-Ai-8HWD4PUeopoHAS8z_D783w2F7h';
 const CLIENT_ID='252560527754-rpr438pbj1ude16sa34cu3r3elik3oqj.apps.googleusercontent.com';
 const SCOPE='https://www.googleapis.com/auth/drive.file';
+const LOGIN_HINT='nickhans@bigpond.net.au';
 
 const DEF={
   startDate:new Date().toISOString().slice(0,10),
@@ -374,8 +397,104 @@ const DEF={
     {id:'mh2',name:'Attend a social event'},
     {id:'mh3',name:'Try something new'}
   ],
-  checks:{},weeklyChecks:{},monthlyChecks:{},reviews:{}
+  checks:{},weeklyChecks:{},monthlyChecks:{},reviews:{},
+  theme:{
+    preset:'spring',
+    colors:{bg:'#faf3e4',surface:'#fffcf5',green:'#3fb8a8',base:'#d9b78c',tier1:'#eec339',tier2:'#e07a4a',flame:'#c93a4e'},
+    thresholds:{t1:50,t2:65,t3:80}
+  }
 };
+
+const PRESETS={
+  spring:{label:'Spring',colors:{bg:'#faf3e4',surface:'#fffcf5',green:'#3fb8a8',base:'#d9b78c',tier1:'#eec339',tier2:'#e07a4a',flame:'#c93a4e'}},
+  summer:{label:'Summer',colors:{bg:'#f3f5f7',surface:'#ffffff',green:'#2f5fa0',base:'#a9b4bd',tier1:'#2fa9a0',tier2:'#8a6fa8',flame:'#d46b9e'}},
+  autumn:{label:'Autumn',colors:{bg:'#f1e6d3',surface:'#fff8ec',green:'#5c6b2e',base:'#c9a06b',tier1:'#d99a1f',tier2:'#b5451c',flame:'#6e1f2e'}},
+  winter:{label:'Winter',colors:{bg:'#eef1f5',surface:'#ffffff',green:'#1e3a8a',base:'#55606b',tier1:'#e8c400',tier2:'#b81f3a',flame:'#e6127a'}}
+};
+
+function hexToRgb(h){h=h.replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');const n=parseInt(h,16);return{r:(n>>16)&255,g:(n>>8)&255,b:n&255};}
+function rgbToHex(r,g,b){return'#'+[r,g,b].map(x=>Math.max(0,Math.min(255,Math.round(x))).toString(16).padStart(2,'0')).join('');}
+function mix(hexA,hexB,t){const a=hexToRgb(hexA),b=hexToRgb(hexB);return rgbToHex(a.r+(b.r-a.r)*t,a.g+(b.g-a.g)*t,a.b+(b.b-a.b)*t);}
+
+function ensureThemeFields(){
+  if(!S.theme)S.theme=JSON.parse(JSON.stringify(DEF.theme));
+  if(!S.theme.colors)S.theme.colors=JSON.parse(JSON.stringify(DEF.theme.colors));
+  if(!S.theme.thresholds)S.theme.thresholds=JSON.parse(JSON.stringify(DEF.theme.thresholds));
+  if(!S.theme.preset)S.theme.preset='original';
+}
+
+function applyTheme(){
+  ensureThemeFields();
+  const c=S.theme.colors,root=document.documentElement.style;
+  root.setProperty('--bg',c.bg);
+  root.setProperty('--surface',c.surface);
+  root.setProperty('--surface2',mix(c.surface,c.bg,0.5));
+  root.setProperty('--border',mix(c.surface,'#000000',0.12));
+  root.setProperty('--border2',mix(c.surface,'#000000',0.2));
+  root.setProperty('--base',c.base);root.setProperty('--base-chip',mix(c.base,'#ffffff',0.75));root.setProperty('--base-text',mix(c.base,'#000000',0.35));
+  root.setProperty('--tier1',c.tier1);root.setProperty('--tier1-chip',mix(c.tier1,'#ffffff',0.82));root.setProperty('--tier1-text',mix(c.tier1,'#000000',0.35));
+  root.setProperty('--tier2',c.tier2);root.setProperty('--tier2-chip',mix(c.tier2,'#ffffff',0.82));root.setProperty('--tier2-text',mix(c.tier2,'#000000',0.35));
+  root.setProperty('--flame',c.flame);root.setProperty('--flame-chip',mix(c.flame,'#ffffff',0.82));root.setProperty('--flame-text',mix(c.flame,'#000000',0.35));
+  root.setProperty('--glow-row',mix(c.flame,c.surface,0.92));
+  root.setProperty('--green',c.green);root.setProperty('--green-dark',mix(c.green,'#000000',0.22));root.setProperty('--green-light',mix(c.green,'#ffffff',0.85));
+  renderLegend();
+}
+
+function renderLegend(){
+  const t=S.theme.thresholds,g=id=>document.getElementById(id);
+  if(g('legend-pct-0'))g('legend-pct-0').textContent=`0–${t.t1-1}%`;
+  if(g('legend-pct-1'))g('legend-pct-1').textContent=`${t.t1}–${t.t2-1}%`;
+  if(g('legend-pct-2'))g('legend-pct-2').textContent=`${t.t2}–${t.t3-1}%`;
+  if(g('legend-pct-3'))g('legend-pct-3').textContent=`${t.t3}–100%`;
+}
+
+function openThemeSettings(){ensureThemeFields();renderThemeModal();document.getElementById('theme-modal').classList.add('open');}
+function closeThemeModal(){document.getElementById('theme-modal').classList.remove('open');}
+
+function renderThemeModal(){
+  const c=S.theme.colors;
+  document.getElementById('preset-swatches').innerHTML=Object.keys(PRESETS).map(key=>{
+    const p=PRESETS[key],active=S.theme.preset===key;
+    const dots=['bg','surface','green','base','tier1','tier2','flame'].map(k=>`<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${p.colors[k]};border:0.5px solid rgba(0,0,0,0.15);"></span>`).join('');
+    return `<button onclick="selectPreset('${key}')" style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 10px;border-radius:8px;border:1.5px solid ${active?'var(--green)':'var(--border2)'};background:${p.colors.surface};cursor:pointer;font-family:inherit;">
+      <div style="display:flex;gap:3px;">${dots}</div>
+      <span style="font-size:10px;color:${active?'var(--green-dark)':'var(--text2)'};font-weight:${active?'600':'400'};">${p.label}</span>
+    </button>`;
+  }).join('');
+
+  const fields=[['bg','Page background'],['surface','Card background'],['green','Accent / checkmark'],['base','1st band'],['tier1','2nd band'],['tier2','3rd band'],['flame','Top band']];
+  document.getElementById('color-pickers').innerHTML=fields.map(([key,label])=>`
+    <label style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text2);">
+      <input type="color" value="${c[key]}" oninput="updateCustomColor('${key}',this.value)" style="width:32px;height:28px;border:0.5px solid var(--border2);border-radius:6px;padding:0;cursor:pointer;">
+      ${label}
+    </label>`).join('');
+
+  const t=S.theme.thresholds;
+  document.getElementById('threshold-inputs').innerHTML=`
+    <label style="font-size:11px;color:var(--text2);display:flex;flex-direction:column;gap:3px;">2nd band<input type="number" min="1" max="98" value="${t.t1}" onchange="updateThreshold('t1',this.value)" style="width:60px;border:0.5px solid var(--border2);border-radius:6px;padding:4px 6px;font-family:inherit;"></label>
+    <label style="font-size:11px;color:var(--text2);display:flex;flex-direction:column;gap:3px;">3rd band<input type="number" min="2" max="99" value="${t.t2}" onchange="updateThreshold('t2',this.value)" style="width:60px;border:0.5px solid var(--border2);border-radius:6px;padding:4px 6px;font-family:inherit;"></label>
+    <label style="font-size:11px;color:var(--text2);display:flex;flex-direction:column;gap:3px;">Top band<input type="number" min="3" max="100" value="${t.t3}" onchange="updateThreshold('t3',this.value)" style="width:60px;border:0.5px solid var(--border2);border-radius:6px;padding:4px 6px;font-family:inherit;"></label>`;
+}
+
+function selectPreset(key){
+  S.theme.preset=key;
+  S.theme.colors=Object.assign({},PRESETS[key].colors);
+  sched();applyTheme();renderThemeModal();render();
+}
+function updateCustomColor(key,val){
+  S.theme.colors[key]=val;S.theme.preset='custom';
+  sched();applyTheme();renderThemeModal();
+}
+function updateThreshold(key,val){
+  let n=parseInt(val,10);if(isNaN(n))return;
+  const t=S.theme.thresholds;n=Math.max(1,Math.min(100,n));
+  if(key==='t1')n=Math.min(n,t.t2-1);
+  if(key==='t2')n=Math.max(t.t1+1,Math.min(n,t.t3-1));
+  if(key==='t3')n=Math.max(t.t2+1,Math.min(n,100));
+  t[key]=n;
+  sched();renderLegend();renderThemeModal();render();
+}
+
 
 let S=JSON.parse(JSON.stringify(DEF));
 let dfid=null, saveT=null, accessToken=null, hasUnsavedChanges=false;
@@ -518,27 +637,32 @@ function whSeasonScore(){
 
 function scCls(p){
   if(p===null||p===0)return'sp-n';
-  return p>=80?'sp-t3':p>=65?'sp-t2':p>=50?'sp-t1':'sp-t0';
+  const t=S.theme.thresholds;
+  return p>=t.t3?'sp-t3':p>=t.t2?'sp-t2':p>=t.t1?'sp-t1':'sp-t0';
 }
 
 function scCircCls(p){
   if(p===null||p===0)return'sc-n';
-  return p>=80?'sc-t3':p>=65?'sc-t2':p>=50?'sc-t1':'sc-t0';
+  const t=S.theme.thresholds;
+  return p>=t.t3?'sc-t3':p>=t.t2?'sc-t2':p>=t.t1?'sc-t1':'sc-t0';
 }
 
 function tierSolid(p){
   if(p===null||p===0)return null;
-  return p>=80?['var(--flame)','#fff']:p>=65?['var(--tier2)','#fff']:p>=50?['var(--tier1)','#fff']:['var(--base-chip)','var(--text)'];
+  const t=S.theme.thresholds;
+  return p>=t.t3?['var(--flame)','#fff']:p>=t.t2?['var(--tier2)','#fff']:p>=t.t1?['var(--tier1)','#fff']:['var(--base-chip)','var(--text)'];
 }
 
 function tierChip(p){
   if(p===null||p===0)return null;
-  return p>=80?['var(--flame-chip)','var(--flame-text)']:p>=65?['var(--tier2-chip)','var(--tier2-text)']:p>=50?['var(--tier1-chip)','var(--tier1-text)']:['var(--base-chip)','var(--base-text)'];
+  const t=S.theme.thresholds;
+  return p>=t.t3?['var(--flame-chip)','var(--flame-text)']:p>=t.t2?['var(--tier2-chip)','var(--tier2-text)']:p>=t.t1?['var(--tier1-chip)','var(--tier1-text)']:['var(--base-chip)','var(--base-text)'];
 }
 
 function scCol(p){
   if(p===null||p===0)return'transparent';
-  return p>=80?'var(--flame)':p>=65?'var(--tier2)':p>=50?'var(--tier1)':'var(--base)';
+  const t=S.theme.thresholds;
+  return p>=t.t3?'var(--flame)':p>=t.t2?'var(--tier2)':p>=t.t1?'var(--tier1)':'var(--base)';
 }
 
 function goalOverallScore(goalId){
@@ -910,8 +1034,8 @@ function renderMetrics(){
   const sc=[];for(let w=1;w<=WKS;w++){const s=wkScore(w);if(s!==null&&s>0)sc.push(s);}
   const tw=wkScore(S.currentWeek),best=sc.length?Math.max(...sc):null,avg=sc.length?Math.round(sc.reduce((a,b)=>a+b,0)/sc.length):null;
   document.getElementById('metrics-row').innerHTML=[
-    ['Overall',avg],
     ['This week',tw&&tw>0?tw:null],
+    ['Overall',avg],
     ['Best week',best]
   ].map(([l,p])=>`<div class="metric"><span class="score-circle metric-circle ${scCircCls(p!==null&&p>0?p:null)}${p===100?' big100':''}">${p!==null&&p>0?p+'%':'—'}</span><div class="metric-lbl">${l}</div></div>`).join('');
 }
@@ -991,7 +1115,7 @@ function saveSeason(v){S.seasonName=v;sched();}
 function render(){
   const snapped=nearestMonday(S.startDate);
   if(snapped!==S.startDate){S.startDate=snapped;}
-  ensureWeeklyFields();
+  ensureWeeklyFields();ensureThemeFields();applyTheme();
   document.getElementById('season-name').value=S.seasonName||'';
   renderDateRange();renderGoals();renderTabs();renderWeekDateBar();renderRows();renderReview();renderMetrics();renderBars();renderWeeklyPanel();renderMonthlyPanel();
 }
@@ -1215,7 +1339,7 @@ function onGapiLoad(){
 
 function signIn(){
   if(!gisLoaded||!tokenClient){alert('Google sign-in is still initialising. Please wait a moment and try again.');return;}
-  tokenClient.requestAccessToken({prompt: ''});
+  tokenClient.requestAccessToken({prompt: '', login_hint: LOGIN_HINT});
 }
 
 function signOut(){
@@ -1344,7 +1468,7 @@ async function ensureFreshToken(){
         tokenIssuedAt=Date.now();
         resolve();
       };
-      tokenClient.requestAccessToken({prompt:''});
+      tokenClient.requestAccessToken({prompt:'',login_hint:LOGIN_HINT});
     });
   }
 }
