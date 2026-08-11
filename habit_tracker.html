@@ -34,8 +34,8 @@
   @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.3} }
   .btn-sm { padding: 5px 12px; border-radius: 6px; border: 0.5px solid var(--border2); background: var(--surface); font-family: inherit; font-size: 12px; color: var(--text2); cursor: pointer; transition: background 0.15s; white-space: nowrap; }
   .btn-sm:hover { background: var(--surface2); }
-  .btn-sm.go { background: #5b6abf; border-color: #5b6abf; color: #fff; }
-  .btn-sm.go:hover { background: #4a57a0; }
+  .btn-sm.go { background: var(--green); border-color: var(--green); color: #fff; }
+  .btn-sm.go:hover { background: var(--green-dark); }
   .top-row { display: grid; grid-template-columns: 290px 1fr; gap: 14px; margin-bottom: 1.5rem; }
   @media(max-width:660px){ .top-row { grid-template-columns: 1fr; } }
   .card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 1.1rem 1.25rem; }
@@ -80,6 +80,7 @@
   tbody td.hcell { text-align: left; padding-left: 14px; }
   tbody tr:last-child td { border-bottom: none; }
   tbody tr:hover td { background: #faf7f0; }
+  .wh-row:hover .wh-cell { background: #faf7f0; }
   .hab-inp { border: none; outline: none; font-family: inherit; font-size: 13px; color: var(--text); background: transparent; width: 100%; }
   .hab-inp:focus { color: var(--green); }
   .goal-tag { font-size: 9px; color: var(--text3); display: block; margin-top: 1px; }
@@ -132,13 +133,16 @@
   .rev-field textarea { width: 100%; border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 7px 9px; font-family: inherit; font-size: 12px; color: var(--text); resize: none; min-height: 58px; outline: none; background: var(--surface2); line-height: 1.5; }
   .rev-field textarea:focus { border-color: var(--green); background: #fff; }
   .bot-row { display: flex; gap: 8px; flex-wrap: wrap; }
-  .btn { padding: 8px 16px; border-radius: var(--radius-sm); border: 0.5px solid #5b6abf; background: #5b6abf; font-family: inherit; font-size: 12px; color: #fff; font-weight: 500; cursor: pointer; transition: background 0.15s; }
-  .btn:hover { background: #4a57a0; }
+  .btn { padding: 8px 16px; border-radius: var(--radius-sm); border: 0.5px solid var(--green); background: var(--green); font-family: inherit; font-size: 12px; color: #fff; font-weight: 500; cursor: pointer; transition: background 0.15s; }
+  .btn:hover { background: var(--green-dark); }
+  .instr-btn { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 8px; border: 0.5px solid var(--border2); background: var(--surface); cursor: pointer; flex-shrink: 0; }
+  .instr-btn:hover { background: var(--surface2); }
   .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 100; align-items: center; justify-content: center; }
   .modal-bg.open { display: flex; }
   .modal { background: var(--surface); border-radius: var(--radius); padding: 1.5rem; max-width: 400px; width: 92%; }
   .modal h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
   .modal p { font-size: 12px; color: var(--text2); line-height: 1.6; margin-bottom: 12px; }
+  .modal li { font-size: 12px; color: var(--text2); line-height: 1.6; }
   .modal input, .modal select { width: 100%; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); padding: 8px 10px; font-family: inherit; font-size: 13px; color: var(--text); outline: none; margin-bottom: 10px; background: var(--surface); }
   .modal input:focus, .modal select:focus { border-color: var(--green); }
   .modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
@@ -182,7 +186,12 @@
       <div><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--flame);margin-right:6px;"></span><span id="legend-pct-3">80–100%</span></div>
     </div>
   </div>
-  <div class="page-sub" id="date-range"></div>
+  <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:1.5rem;">
+    <div class="page-sub" id="date-range" style="margin-bottom:0;"></div>
+    <button class="instr-btn" onclick="openInstructions()" title="How to use this page">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="15.5" x2="16" y2="15.5"/><line x1="8" y1="19" x2="13" y2="19"/></svg>
+    </button>
+  </div>
 
   <div class="sync-bar">
     <div class="sync-dot" id="sdot"></div>
@@ -193,12 +202,14 @@
     <button class="btn-sm" id="save-all-btn" onclick="manualSaveDrive()" style="display:none">Save All to Drive</button>
   </div>
 
-  <div class="week-nav">
-    <span class="wk-lbl">Week</span>
-    <div id="week-tabs" style="display:flex;gap:5px;flex-wrap:wrap;"></div>
-  </div>
+  <div class="card" style="padding:1rem 1.1rem;margin-bottom:1.5rem;">
+    <div class="week-nav" style="margin-bottom:0.6rem;">
+      <span class="wk-lbl">Week</span>
+      <div id="week-tabs" style="display:flex;gap:5px;flex-wrap:wrap;"></div>
+    </div>
 
-  <div id="week-date-bar" style="font-size:13px;color:var(--text2);margin-bottom:10px;padding:0 2px;"></div>
+    <div id="week-date-bar" style="font-size:13px;color:var(--text2);padding:0 2px;"></div>
+  </div>
 
   <div class="top-row">
     <div class="card">
@@ -284,6 +295,91 @@
     <button class="btn season" onclick="startNewSeason()">Start New Season</button>
     <button class="btn" onclick="clearWeek()">Clear this week</button>
     <button class="btn dan" onclick="resetAll()">Reset all data</button>
+  </div>
+</div>
+
+<div class="modal-bg" id="instructions-modal">
+  <div class="modal" style="max-width:520px;max-height:80vh;overflow:auto;">
+    <h3>How to use this Seasonal Habit Tracker</h3>
+    <p style="margin-bottom:6px;">The Seasonal Habit Tracker runs for 3 months (13 weeks). When the season changes, you review and change your goals and desired habits to match the new season.</p>
+    <p style="margin-bottom:14px;">As the days, weeks and months progress you tick off your Habits for that period. Your Habits should be positive – things you aim to do every day, or week or month. The Habit Tracker includes a scoring system that monitors your progress in achieving your Habit aims.</p>
+
+    <p style="margin-bottom:4px;font-weight:700;">SETTING UP</p>
+
+    <p style="margin-bottom:2px;font-weight:600;">Set the Season</p>
+    <ul style="margin:0 0 10px;padding-left:18px;">
+      <li>Change the name of the Season beside the heading at top of the page. This will be the name of the saved csv file. (click on season name to edit it).</li>
+      <li>Set the date (a Monday) when you want the season to start. (click on edit start date).</li>
+    </ul>
+
+    <p style="margin-bottom:2px;font-weight:600;">Thresholds and Colours</p>
+    <ul style="margin:0 0 10px;padding-left:18px;">
+      <li>Scores are measured in percentages. Scores show the percentage of habits you ticked off in a given time period – e.g. day, week, month or overall (overall is the full 13 week season)</li>
+      <li>Colours change to indicate better performance.</li>
+      <li>You can set the Thresholds and Colours. Click the box at top right of the Tracker to change the Thresholds and Colours.</li>
+    </ul>
+
+    <p style="margin-bottom:2px;font-weight:600;">Weekly Choice Row</p>
+    <ul style="margin:0 0 10px;padding-left:18px;">
+      <li>Near the top of the page is a row of horizontal icons showing weeks numbered W1 to W13. You use this to select the week you want to show (click on the week number you want).</li>
+    </ul>
+
+    <p style="margin-bottom:2px;font-weight:600;">Goals &amp; Habits for this Season</p>
+    <ul style="margin:0 0 10px;padding-left:18px;">
+      <li>Set 3 Goals for this season. You are limited to 3 goals to help focus your efforts for this time period.</li>
+      <li>In the next section you list your recurring Daily Habits to achieve each goal. When the Daily Habits are filled in you can flip the side arrow beside each Goal to show the Daily Habits relating to each Goal.</li>
+      <li>The Panel to the right of this has Scores showing performance in doing Daily Habits.</li>
+    </ul>
+
+    <p style="margin-bottom:2px;font-weight:600;">Daily Habits</p>
+    <ul style="margin:0 0 10px;padding-left:18px;">
+      <li>Edit and add your Daily Habits in this table</li>
+      <li>Use the + button to add a new Daily Habit</li>
+      <li>Assign each Habit to one of the Goals you are trying to achieve</li>
+      <li>Move the Habits up or down with arrows on right hand side</li>
+    </ul>
+
+    <p style="margin-bottom:2px;font-weight:600;">Weekly Habits</p>
+    <ul style="margin:0 0 10px;padding-left:18px;">
+      <li>Edit and add your Weekly Habits in this table</li>
+      <li>Use the + button to add a new Weekly Habit</li>
+      <li>Move the Habits up or down with arrows on right hand side</li>
+    </ul>
+
+    <p style="margin-bottom:2px;font-weight:600;">Monthly Habits</p>
+    <ul style="margin:0 0 10px;padding-left:18px;">
+      <li>Edit and add your Monthly Habits in this table</li>
+      <li>Use the + button to add a new Monthly Habit</li>
+      <li>Move the Habits up or down with arrows on right hand side</li>
+    </ul>
+
+    <p style="margin-bottom:2px;font-weight:600;">Edits during the season</p>
+    <ul style="margin:0 0 14px;padding-left:18px;">
+      <li>The Habit Tracker only has one setup state. You can edit Goals and Habits during the Season but these also make the same changes to periods already completed.</li>
+    </ul>
+
+    <p style="margin-bottom:4px;font-weight:700;">USING THE TRACKER</p>
+    <ul style="margin:0 0 14px;padding-left:18px;">
+      <li>Use Weekly Choice row to select the week you want to show (from W1 to W13)</li>
+      <li>Daily – tick off the Daily Habits you achieved each day</li>
+      <li>Weekly – tick off the Weekly Habits you achieved each week.</li>
+      <li>Monthly – tick off the Monthly Habits you achieved in each 4 or 5 week period.</li>
+      <li>Review. At the end of each week note down what went well and what you hope to improve in the following week.</li>
+      <li>Click the notepad icon on the date line any time to reopen these instructions.</li>
+    </ul>
+
+    <p style="margin-bottom:4px;font-weight:700;">OTHER BUTTONS</p>
+    <ul style="margin:0 0 0;padding-left:18px;">
+      <li>Google Drive - Connects browser page to Google Drive to save and sync your data automatically across devices.</li>
+      <li>Save All to Drive – Saves current data to Google Drive in JSON file.</li>
+      <li>Disconnect – Disconnects browser page from Google Drive</li>
+      <li>Export data as CSV - downloads your data to a CSV file. When you start a new season existing data in the browser is lost. If you want to preserve the data for a period you need to save it separately.</li>
+      <li>Start New Season - Starts a new Season and archives the current season</li>
+      <li>Clear this week – Clears only the current week's ticked Habits. It does not clear Monthly Habits – if you want to clear those you have to manually untick them.</li>
+      <li>Reset all data – This wipes all data in the Tracker. Be cautious about this, the data is not recoverable. There is a confirmation warning when you click the button.</li>
+    </ul>
+
+    <div class="modal-btns"><button class="btn" onclick="document.getElementById('instructions-modal').classList.remove('open')">Close</button></div>
   </div>
 </div>
 
@@ -805,6 +901,7 @@ function renderWeeklyPanel(){
     const upBtn=idx>0?`<button class="move-btn" onclick="moveWeeklyHabit('${wh.id}',-1)" title="Move up">▲</button>`:'<span style="display:inline-block;width:14px;"></span>';
     const dnBtn=idx<S.weeklyHabits.length-1?`<button class="move-btn" onclick="moveWeeklyHabit('${wh.id}',1)" title="Move down">▼</button>`:'<span style="display:inline-block;width:14px;"></span>';
     const row=document.createElement('div');
+    row.className='wh-row';
     row.style.cssText='display:grid;grid-template-columns:1fr auto auto auto;border-bottom:0.5px solid #f5f0e5;';
     row.innerHTML=`
       <div class="wh-cell">
@@ -929,6 +1026,7 @@ function renderMonthlyPanel(){
     const upBtn=idx>0?`<button class="move-btn" onclick="moveMonthlyHabit('${mh.id}',-1)" title="Move up">▲</button>`:'<span style="display:inline-block;width:14px;"></span>';
     const dnBtn=idx<S.monthlyHabits.length-1?`<button class="move-btn" onclick="moveMonthlyHabit('${mh.id}',1)" title="Move down">▼</button>`:'<span style="display:inline-block;width:14px;"></span>';
     const row=document.createElement('div');
+    row.className='wh-row';
     row.style.cssText='display:grid;grid-template-columns:1fr auto auto auto;border-bottom:0.5px solid #f5f0e5;';
     row.innerHTML=`
       <div class="wh-cell">
@@ -1093,6 +1191,8 @@ function renderWeekDateBar(){
   const f=d=>d.toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'});
   document.getElementById('week-date-bar').textContent=`Week ${w}  ·  ${f(st)} — ${f(en)}`;
 }
+
+function openInstructions(){document.getElementById('instructions-modal').classList.add('open');}
 
 function editStartDate(){
   const el=document.getElementById('date-range');
