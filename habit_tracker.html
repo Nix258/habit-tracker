@@ -579,7 +579,11 @@ function selectPreset(key){
 }
 function updateCustomColor(key,val){
   S.theme.colors[key]=val;S.theme.preset='custom';
-  sched();applyTheme();renderThemeModal();
+  sched();applyTheme();
+  document.querySelectorAll('#preset-swatches button').forEach(b=>{
+    b.style.borderColor='var(--border2)';
+    const lbl=b.querySelector('span:last-child');if(lbl){lbl.style.color='var(--text2)';lbl.style.fontWeight='400';}
+  });
 }
 function updateThreshold(key,val){
   let n=parseInt(val,10);if(isNaN(n))return;
